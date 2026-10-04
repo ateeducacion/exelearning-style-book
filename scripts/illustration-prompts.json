@@ -1,49 +1,49 @@
 {
   "tool": "image_gen (built-in)",
-  "reference": "01-inicio.png: style reference for the remaining illustrations",
+  "reference": "01-inicio.jpg: style reference for the remaining illustrations",
   "images": [
     {
-      "asset": "633e3582-b108-d898-b333-1e7eacefaed6.png",
+      "asset": "633e3582-b108-d898-b333-1e7eacefaed6.jpg",
       "prompt": "Use case: scientific-educational. Create one landscape illustration for the opening page of a Spanish primary-school book about the water cycle. Traditional hand-painted watercolor and fine sepia ink on warm ivory paper, gentle natural colors, muted sage vegetation, blue water, warm ochre sunlight, delicate paper texture, clear charming educational book illustration. Scene: sunny mountain landscape with a winding river flowing downhill into a lake, trees, distant snowy peaks, a cloud raining over a hill while the sun shines elsewhere. Wide composition about 4:3, generous clean ivory margins, no frame. No words, labels, letters, logos or watermark. Smooth organic shapes and fine natural detail, absolutely no pixel art, no 8-bit shapes, no neon palette, no digital UI. This is a flat printed illustration, not a photo of a book."
     },
     {
-      "asset": "3e0f34fd-0cd3-9694-0c41-7df3106fc2f1.png",
+      "asset": "3e0f34fd-0cd3-9694-0c41-7df3106fc2f1.jpg",
       "prompt": "Use case: scientific-educational. Asset: one landscape illustration for a Spanish primary school water-cycle book. Match the style of the supplied reference illustration only, not its composition. Traditional watercolor washes and fine sepia ink, warm ivory paper texture, soft natural blues, sage greens and ochres, organic smooth contours, tasteful vintage educational book illustration. Wide approximately 4:3 composition with light ivory margins and no frame, simple enough to read at 320px wide. Scene: General water cycle diagram: sun over coastal sea on the left, evaporation indicated by a slender upward arrow from the sea, cloud forming above, rainfall over mountains on the right indicated by a downward arrow, river returning downhill from mountains to sea indicated by a leftward arrow along the river. Scientifically coherent arrows, clear at small size. No labels. Constraints: flat artwork, not a photo of a book or screen. No text, labels, watermark, logos, pixel art, 8-bit graphics, neon colors or modern digital interface."
     },
     {
-      "asset": "3d4a5de5-41ae-7ccc-14ea-9a188bca7f23.png",
+      "asset": "3d4a5de5-41ae-7ccc-14ea-9a188bca7f23.jpg",
       "prompt": "Use case: scientific-educational. Asset: one landscape illustration for a Spanish primary school water-cycle book. Match the style of the supplied reference illustration only, not its composition. Traditional watercolor washes and fine sepia ink, warm ivory paper texture, soft natural blues, sage greens and ochres, organic smooth contours, tasteful vintage educational book illustration. Wide approximately 4:3 composition with light ivory margins and no frame, simple enough to read at 320px wide. Scene: Evaporation: warm sunlight reaching a lake, a few subtle upward arrows over water and over nearby tree leaves indicating invisible water vapor rising, distant hills. Do not depict smoke or boiling water; ordinary sun-warmed natural lake. Constraints: flat artwork, not a photo of a book or screen. No text, labels, watermark, logos, pixel art, 8-bit graphics, neon colors or modern digital interface."
     },
     {
-      "asset": "9cfe587b-36d2-5a64-49a8-a129326837f2.png",
+      "asset": "9cfe587b-36d2-5a64-49a8-a129326837f2.jpg",
       "prompt": "Use case: scientific-educational. Asset: one landscape illustration for a Spanish primary school water-cycle book. Match the style of the supplied reference illustration only, not its composition. Traditional watercolor washes and fine sepia ink, warm ivory paper texture, soft natural blues, sage greens and ochres, organic smooth contours, tasteful vintage educational book illustration. Wide approximately 4:3 composition with light ivory margins and no frame, simple enough to read at 320px wide. Scene: Condensation: cloud forming in cool blue sky above lake and hills, subtle tiny blue water droplets clustered in a circular scientific inset linked to the cloud, conveying that clouds are tiny liquid droplets. No steam rising from the lake, focus on clouds and droplets. Constraints: flat artwork, not a photo of a book or screen. No text, labels, watermark, logos, pixel art, 8-bit graphics, neon colors or modern digital interface."
     },
     {
-      "asset": "SP00000017/05-precipitacion.png",
+      "asset": "SP00000017/05-precipitacion.jpg",
       "prompt": "Use case: scientific-educational. Asset: one landscape illustration for a Spanish primary school water-cycle book. Match the style of the supplied reference illustration only, not its composition. Traditional watercolor washes and fine sepia ink, warm ivory paper texture, soft natural blues, sage greens and ochres, organic smooth contours, tasteful vintage educational book illustration. Wide approximately 4:3 composition with light ivory margins and no frame, simple enough to read at 320px wide. Scene: Precipitation: three adjacent natural mountain slopes under clouds, rain drops falling at left, snowflakes above a snowy peak at center, small white hail pellets falling at right. Coherent unified landscape, distinguish rain, snow and hail without text. Constraints: flat artwork, not a photo of a book or screen. No text, labels, watermark, logos, pixel art, 8-bit graphics, neon colors or modern digital interface."
     },
     {
-      "asset": "SP00000020/06-recogida.png",
+      "asset": "SP00000020/06-recogida.jpg",
       "prompt": "Use case: scientific-educational. Asset: one landscape illustration for a Spanish primary school water-cycle book. Match the style of the supplied reference illustration only, not its composition. Traditional watercolor washes and fine sepia ink, warm ivory paper texture, soft natural blues, sage greens and ochres, organic smooth contours, tasteful vintage educational book illustration. Wide approximately 4:3 composition with light ivory margins and no frame, simple enough to read at 320px wide. Scene: Water collection: mountain streams joining a winding river flowing into a blue coastal sea, trees, a small geological cutaway in one corner showing water infiltrating brown earth into a blue underground aquifer with thin downward arrows. Constraints: flat artwork, not a photo of a book or screen. No text, labels, watermark, logos, pixel art, 8-bit graphics, neon colors or modern digital interface."
     },
     {
-      "asset": "21d01ff8-5f3f-217c-7e1b-10898a9225ce.png",
+      "asset": "21d01ff8-5f3f-217c-7e1b-10898a9225ce.jpg",
       "prompt": "Use case: scientific-educational. Asset: one landscape illustration for a Spanish primary school water-cycle book. Match the style of the supplied reference illustration only, not its composition. Traditional watercolor washes and fine sepia ink, warm ivory paper texture, soft natural blues, sage greens and ochres, organic smooth contours, tasteful vintage educational book illustration. Wide approximately 4:3 composition with light ivory margins and no frame, simple enough to read at 320px wide. Scene: Activities: open cream paper exercise notebook on a wooden desk with a pencil, pages contain simple small watercolor water-cycle sketches (sun, cloud, rain and lake) and a few empty checkboxes, inviting study. No letters or simulated text. Constraints: flat artwork, not a photo of a book or screen. No text, labels, watermark, logos, pixel art, 8-bit graphics, neon colors or modern digital interface."
     },
     {
-      "asset": "258fb284-be1e-044c-04d5-667796915e33.png",
+      "asset": "258fb284-be1e-044c-04d5-667796915e33.jpg",
       "prompt": "Use case: scientific-educational. Asset: one landscape illustration for a Spanish primary school water-cycle book. Match the style of the supplied reference illustration only, not its composition. Traditional watercolor washes and fine sepia ink, warm ivory paper texture, soft natural blues, sage greens and ochres, organic smooth contours, tasteful vintage educational book illustration. Wide approximately 4:3 composition with light ivory margins and no frame, simple enough to read at 320px wide. Scene: Ordering water-cycle stages exercise: four separate ivory paper study cards arranged left to right, each with a clear watercolor vignette, respectively sun warming water with upward arrows, cloud forming, cloud with rain, river joining a lake. No numbers, labels or arrows between cards; do not draw UI. Constraints: flat artwork, not a photo of a book or screen. No text, labels, watermark, logos, pixel art, 8-bit graphics, neon colors or modern digital interface."
     },
     {
-      "asset": "SP00000031/09-verdadero-o-falso.png",
+      "asset": "SP00000031/09-verdadero-o-falso.jpg",
       "prompt": "Use case: scientific-educational. Asset: one landscape illustration for a Spanish primary school water-cycle book. Match the style of the supplied reference illustration only, not its composition. Traditional watercolor washes and fine sepia ink, warm ivory paper texture, soft natural blues, sage greens and ochres, organic smooth contours, tasteful vintage educational book illustration. Wide approximately 4:3 composition with light ivory margins and no frame, simple enough to read at 320px wide. Scene: True or false exercise: two ivory paper cards on a wooden desk beside a blue water droplet illustration and pencil; left card has a single clear sage-green check mark, right card has a single clear muted terracotta X. No words or letters. Constraints: flat artwork, not a photo of a book or screen. No text, labels, watermark, logos, pixel art, 8-bit graphics, neon colors or modern digital interface."
     },
     {
-      "asset": "SP00000036/10-recursos.png",
+      "asset": "SP00000036/10-recursos.jpg",
       "prompt": "Use case: scientific-educational. Asset: one landscape illustration for a Spanish primary school water-cycle book. Match the style of the supplied reference illustration only, not its composition. Traditional watercolor washes and fine sepia ink, warm ivory paper texture, soft natural blues, sage greens and ochres, organic smooth contours, tasteful vintage educational book illustration. Wide approximately 4:3 composition with light ivory margins and no frame, simple enough to read at 320px wide. Scene: Further learning resources: small row of cloth-bound reference books in muted teal, ochre, burgundy and sage, one open illustrated book showing tiny cloud, mountain and river drawings, a simple bookmark. No titles or letters. Constraints: flat artwork, not a photo of a book or screen. No text, labels, watermark, logos, pixel art, 8-bit graphics, neon colors or modern digital interface."
     },
     {
-      "asset": "0c493748-09a9-26f9-d3a1-49367bcc9d90.png",
+      "asset": "0c493748-09a9-26f9-d3a1-49367bcc9d90.jpg",
       "prompt": "Use case: scientific-educational. Asset: one landscape illustration for a Spanish primary school water-cycle book. Match the style of the supplied reference illustration only, not its composition. Traditional watercolor washes and fine sepia ink, warm ivory paper texture, soft natural blues, sage greens and ochres, organic smooth contours, tasteful vintage educational book illustration. Wide approximately 4:3 composition with light ivory margins and no frame, simple enough to read at 320px wide. Scene: Credits and downloads: an open cream paper book with a small landscape illustration, a fountain pen and a neat stack of loose pages held by a brass clip; subtle downward arrow symbol on the top loose sheet conveys downloading. No words or letters. Constraints: flat artwork, not a photo of a book or screen. No text, labels, watermark, logos, pixel art, 8-bit graphics, neon colors or modern digital interface."
     }
   ]
