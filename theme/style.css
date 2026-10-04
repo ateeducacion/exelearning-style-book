@@ -1,0 +1,1382 @@
+/*!
+ * Libro (Book) — eXeLearning style
+ * The resource is read as an open book on a desk: each page of eXeLearning is cut
+ * into book pages (two at a time on wide screens, one on phones), the page corners
+ * turn the page and a ribbon bookmark opens the table of contents. Without
+ * JavaScript, or when printing, it is a normal scrolling page.
+ *
+ * Based on the eXeLearning "Default" style by Ignacio Gros (exelearning.net).
+ * Licensed under Creative Commons Attribution-ShareAlike 4.0 (CC BY-SA).
+ */
+
+body.exe-export {
+    padding: 1em 0;
+}
+
+body.exe-web-site {
+    padding: 0;
+}
+
+.exe-content a {
+    color: #8a3324;
+}
+
+.exe-content a:hover,
+.exe-content a:focus {
+    color: #5f2318;
+}
+
+/* The current page is a filled chip, so it keeps the colour of the effects */
+.exe-content .fx-tabs a,
+.exe-content .fx-pagination li:not(.fx-current) a {
+    color: #8a3324;
+}
+
+.exe-content .fx-tabs a:hover,
+.exe-content .fx-tabs a:focus {
+    color: #5f2318;
+}
+
+#node-content-container.exe-content #node-content {
+    padding-top: 20px;
+    padding-bottom: 20px;
+    max-width: 1280px;
+    margin: 0 auto;
+    display: block;
+}
+
+.exe-content {
+    color: #333;
+    background-color: #fff;
+}
+
+.js .exe-export .exe-content {
+    min-height: 100vh;
+}
+
+/* iframe */
+.js .in-iframe .exe-content {
+    min-height: 0;
+}
+
+.exe-content .package-title {
+    font-size: 1.25rem;
+    font-weight: 300;
+    margin-bottom: .4em;
+    line-height: 1.2em;
+}
+
+.exe-content .page-title {
+    color: #7a2e2e;
+    font-size: 1.7rem;
+    text-align: left;
+}
+
+.exe-single-page .package-header .package-title {
+    color: #333;
+    font-size: 1.25rem;
+    font-weight: 300;
+    text-align: left;
+    margin-bottom: 2em;
+}
+
+.exe-single-page .package-node {
+    margin-bottom: 3.5em;
+}
+
+.exe-single-page .package-subtitle {
+    top: -2.1em;
+}
+
+.exe-single-page main.page>section {
+    min-height: 4em;
+}
+
+.exe-content .box {
+    margin: 20px 0;
+    border: none;
+    background-color: #fff;
+}
+
+.exe-web-site .exe-content .box {
+    margin: 40px 0;
+}
+
+.exe-content .box-head {
+    border-bottom: 0;
+}
+
+#node-content-container .box-content {
+    background: #fcfcfc;
+    border: 1px solid #ececec;
+    padding: 10px;
+    border-radius: 8px;
+}
+article.box.idevice-element-in-content[mode="export"] .idevice_node {
+    background: none;
+}
+
+#node-content-container.exe-content .box.hidden-idevices {
+    border-style: solid;
+}
+
+.exe-content .box header {
+    min-height: 60px;
+}
+
+.exe-content .box-title {
+    color: #4a1c1c;
+    font-size: 1.5rem;
+}
+
+/* General icons (Material Symbols) */
+.exe-content {
+    --exe-icon-color: #9a6a3a;
+}
+
+.exe-content .box-head .box-icon {
+    color: var(--exe-icon-color);
+}
+
+.exe-content .box-head .exe-icon {
+    float: left;
+}
+.nav-buttons .nav-button,
+button.toggler {
+    position: fixed;
+    top: 10px;
+    left: 15px;
+    display: block;
+    width: 40px;
+    height: 40px;
+    background: #7a2e2e url(img/icons.png) no-repeat 0 0;
+    background-size: auto 40px;
+    border-radius: 50%;
+    z-index: 999;
+    border: 0;
+    transition: background-color 0.5s ease;
+}
+
+.nav-buttons span.nav-button {
+    cursor: not-allowed;
+    background-color: #b7b7b7;
+}
+
+.nav-buttons .nav-button-left {
+    background-position: -80px 0;
+}
+
+.nav-buttons .nav-button-right {
+    background-position: -120px 0;
+}
+
+button#searchBarToggler {
+    background-position: -40px 0;
+    display: none;
+}
+
+.exe-search-on #searchBarToggler {
+    display: inline;
+}
+
+button#siteNavToggler {
+    left: 280px;
+}
+
+button#searchBarToggler {
+    left: 330px;
+}
+
+body.siteNav-off button#siteNavToggler {
+    left: 65px;
+}
+
+body.siteNav-off button#searchBarToggler {
+    left: 115px;
+}
+
+.nav-buttons a:hover,
+.nav-buttons a:focus,
+button.toggler:hover,
+button.toggler:focus {
+    background-color: #5f2323;
+    border-color: #5f2323;
+}
+
+.nav-buttons .nav-button span,
+.box-toggle span,
+#exe-client-search-reset span,
+#packageLicense .license-label {
+    position: absolute;
+    clip: rect(1px 1px 1px 1px);
+    /* IE6, IE7 */
+    clip: rect(1px, 1px, 1px, 1px);
+}
+
+.package-subtitle {
+    font-size: .95em;
+    color: #666;
+    position: relative;
+    top: -.15em;
+}
+
+.nav-buttons .nav-button-right {
+    left: auto;
+    right: 15px;
+}
+
+/* Box toggler */
+.exe-export .box {
+    position: relative;
+}
+
+.exe-export .box-toggle {
+    width: 40px;
+    height: 40px;
+    background: url(img/icons.png) no-repeat -200px 0;
+    background-size: auto 40px;
+    border-radius: 50%;
+    border: 0;
+    position: absolute;
+    top: 0;
+    right: 0;
+    opacity: 0.6;
+}
+
+.exe-export .box-head:hover .box-toggle,
+.exe-export .box-toggle:focus {
+    opacity: 1;
+}
+
+.exe-export .no-header .box-toggle {
+    top: -10px;
+}
+
+.exe-export .minimized .box-toggle {
+    background-position: -160px 0;
+}
+
+#node-content-container.exe-content .box-head .exe-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 40px;
+}
+
+#node-content-container.exe-content .box-head .exe-icon img {
+    height: 40px;
+}
+
+.exe-export .box-icon img {
+    display: block;
+    float: left;
+    margin-right: 10px;
+    width: 40px;
+    height: auto;
+}
+
+/* General icons (Material Symbols) */
+.exe-export .box-icon .exe-material-icon {
+    display: block;
+    float: left;
+    margin-right: 10px;
+    width: 40px;
+    height: 40px;
+    background-color: currentColor;
+    -webkit-mask-image: var(--exe-material-icon-url);
+    mask-image: var(--exe-material-icon-url);
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    /* 20px live area on a 24px grid: scale 24/20 so the ink matches the Style icons */
+    transform: scale(1.2);
+}
+
+.exe-export .box-title {
+    padding-top: 5px;
+}
+
+.exe-export .box.minimized .box-head {
+    border-bottom: 1px solid #ddd;
+}
+
+.exe-export .box.no-header.minimized .box-head {
+    border-color: #fff;
+}
+
+.exe-export .box .box-content {
+    background: none;
+    border: 0;
+    border-top: 1px solid var(--book-paper-edge, #ddd);
+    padding: 20px 0;
+    border-radius: 8px;
+    overflow: auto;
+}
+
+.exe-export .box.no-header .box-content {
+    background: none;
+    border: none;
+    padding: 20px 0;
+}
+
+/* Search bar */
+#exe-client-search {
+    display: none;
+    margin-bottom: 30px;
+}
+
+#exe-client-search-text {
+    max-width: 80%;
+    max-width: calc(100% - 90px);
+    display: inline;
+}
+
+#exe-client-search-submit {
+    text-indent: -999em;
+    background: #7a2e2e url(img/icons.png) no-repeat -41px -1px;
+    background-size: auto 40px;
+    width: 38px;
+    height: 38px;
+    border: none;
+    border-radius: 4px;
+}
+
+#exe-client-search-reset.visible {
+    background: url(img/icons.png) no-repeat -242px -1px;
+    background-size: auto 40px;
+    width: 38px;
+    height: 38px;
+    display: inline-block;
+    vertical-align: middle;
+    position: relative;
+    top: -3px;
+    left: -5px;
+    opacity: 0.6;
+    border-radius: 4px;
+}
+
+#exe-client-search-reset:hover,
+#exe-client-search-reset:focus {
+    opacity: 1;
+}
+
+#exe-client-search-submit:hover,
+#exe-client-search-submit:focus {
+    background-color: #5f2323;
+}
+
+#exe-client-search-results-list ul,
+#exe-client-search-results-list li {
+    margin: 2em 0;
+    padding: 0;
+    list-style: none;
+}
+
+#exe-client-search-results-list li {
+    margin: 0 0 1em 0;
+}
+
+#exe-client-search-results-list p {
+    margin-top: 2em;
+}
+
+/* Licenses */
+#packageLicense {
+    text-align: left;
+    font-size: 0.9em;
+    color: #555;
+    line-height: 1em;
+    margin: 2.5em 0 2em 0;
+    border: 1px solid transparent;
+    border-radius: 2px;
+}
+
+#packageLicense p {
+    margin: 0;
+}
+
+#packageLicense a {
+    color: #666;
+    text-transform: capitalize;
+    display: inline-block;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    overflow: hidden;
+    line-height: 15px;
+}
+
+#packageLicense a:hover,
+#packageLicense a:focus {
+    text-decoration: none;
+    color: #8a3324;
+}
+
+#packageLicense.propietary {
+    position: absolute;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    height: 0;
+}
+
+#packageLicense.cc {
+    padding: 0 20px 0 90px;
+    background: url(img/licenses.gif) no-repeat 0 0;
+}
+
+#packageLicense.cc-by-sa {
+    background-position: 0 -100px;
+}
+
+#packageLicense.cc-by-nd {
+    background-position: 0 -200px;
+}
+
+#packageLicense.cc-by-nc {
+    background-position: 0 -300px;
+}
+
+#packageLicense.cc-by-nc-sa {
+    background-position: 0 -400px;
+}
+
+#packageLicense.cc-by-nc-nd {
+    background-position: 0 -500px;
+}
+
+#packageLicense.cc-0 {
+    background-position: 0 -600px;
+}
+
+/* iDevice buttons */
+.exe-content .iDevice_buttons input,
+.exe-content .iDevice_buttons button {
+    background: #fff;
+    color: #555;
+    border: 1px solid #949494;
+    padding: 4px 10px;
+    border-radius: 4px;
+    transition: 0.5s ease;
+}
+
+.exe-content .iDevice_buttons input:hover,
+.exe-content .iDevice_buttons input:focus,
+.exe-content .iDevice_buttons button:hover,
+.exe-content .iDevice_buttons button:focus {
+    box-shadow: 2px 2px 4px #dbdbdb;
+    color: #000;
+    border-color: #7a7a7a;
+}
+
+/* Page counter */
+.page-counter {
+    display: inline;
+    float: right;
+    margin: 0 0 0.5em 20px;
+    font-size: 0.9em;
+    color: #767676;
+    font-weight: 300;
+}
+
+.page-counter .page-counter-sep {
+    margin: 0 0.1em;
+}
+
+.exe-web-site .page-counter {
+    position: fixed;
+    top: 18px;
+    right: 70px;
+    margin: 0;
+    font-size: 0.9em;
+    color: #767676;
+    padding: 0 8px;
+    border-radius: 4px;
+    text-align: left;
+}
+
+/* Teacher mode */
+#teacher-mode-toggler-wrapper {
+    float: right;
+    margin: 0 0 0 1em;
+}
+
+#teacher-mode-toggler.form-check-input {
+    font-size: 0.9em;
+    margin-right: 0.6em;
+}
+
+#teacher-mode-toggler.form-check-input:checked {
+    background-color: #7a2e2e;
+    border-color: #7a2e2e;
+}
+
+label[for="teacher-mode-toggler"] {
+    font-size: 0.9em;
+    color: #767676;
+    position: relative;
+    top: -0.2em;
+}
+
+/* Bootstrap buttons */
+.exe-content .btn-primary {
+    background-color: #5f2323;
+    border-color: #5f2323;
+}
+
+.exe-content .btn-primary:hover,
+.exe-content .btn-primary:focus {
+    background-color: #6b2828;
+    border-color: #6b2828;
+}
+
+/* Focus */
+.exe-content {
+    --exe-fx-focus-color: #4a1c1c;
+}
+
+.exe-content a:focus-visible,
+#siteNav a:focus-visible,
+#packageLicense a:focus-visible,
+.nav-buttons .nav-button:focus-visible,
+button.toggler:focus-visible,
+.exe-export .box-toggle:focus-visible,
+#exe-client-search-submit:focus-visible,
+#exe-client-search-reset:focus-visible,
+.exe-content .iDevice_buttons input:focus-visible,
+.exe-content .iDevice_buttons button:focus-visible {
+    outline: 2px solid #4a1c1c;
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #siteNav a,
+    .nav-buttons .nav-button,
+    button.toggler,
+    .exe-content .iDevice_buttons input,
+    .exe-content .iDevice_buttons button {
+        transition: none;
+    }
+}
+
+
+@media print {
+
+    /* Node in new page: section.package-node{page-break-after:always} */
+    html body.exe-export {
+        background: #fff;
+    }
+
+    .exe-content {
+        color: #000;
+    }
+
+    @page {
+        margin: 1.5cm;
+    }
+
+    /* Uncomment this to print URL after links:
+    a{font-weight:bolder;text-decoration:none!important}
+    a[href^=http]:after{content:" <" attr(href) "> "}
+    */
+    #packageLicense.cc {
+        background: none;
+        padding-left: 0;
+    }
+
+    .exe-export .box-toggle {
+        display: none;
+    }
+
+    /* Website */
+    .exe-web-site #siteNav,
+    .exe-web-site .nav-buttons,
+    .exe-web-site button.toggler {
+        display: none;
+    }
+
+    .exe-web-site #siteFooter,
+    .exe-web-site main.page {
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .exe-web-site main.page {
+        padding-top: 1em;
+    }
+}
+
+/* ===================================================================
+ * Book look, shared by every mode
+ * =================================================================== */
+
+@font-face {
+    font-family: "Literata";
+    font-style: normal;
+    font-weight: 200 900;
+    font-display: swap;
+    src: url("fonts/literata-latin-normal.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Literata";
+    font-style: italic;
+    font-weight: 200 900;
+    font-display: swap;
+    src: url("fonts/literata-latin-italic.woff2") format("woff2");
+}
+
+:root {
+    --book-desk: #c9bda9;
+    --book-paper: #fbf7ee;
+    --book-under: #e9e1cf;
+    --book-ink: #2a2622;
+    --book-muted: #6d6358;
+    --book-accent: #8b2f2a;
+    --book-serif: "Literata", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --book-turn: 0.7s;
+}
+
+body.exe-export {
+    color: var(--book-ink);
+    background: var(--book-desk);
+}
+
+.exe-content {
+    color: var(--book-ink);
+    background-color: var(--book-paper);
+    font-family: var(--book-serif);
+    font-size: 17px;
+    line-height: 1.62;
+}
+
+.exe-content a {
+    color: var(--book-accent);
+}
+
+.exe-content a:hover,
+.exe-content a:focus {
+    color: #5e1f1b;
+}
+
+.exe-content .page-title,
+.exe-content .box-title,
+.exe-content .package-title {
+    font-family: var(--book-serif);
+}
+
+.exe-content .page-title {
+    margin: 0 0 0.7em;
+    font-size: 2.35rem;
+    font-weight: 600;
+    line-height: 1.1;
+    color: var(--book-accent);
+}
+
+.exe-content .box-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--book-ink);
+}
+
+.exe-content .box header,
+.exe-content .box-head {
+    min-height: 0;
+}
+
+.exe-export .box-icon {
+    width: 32px;
+    height: 32px;
+}
+
+.exe-web-site .exe-content .box {
+    margin: 0 0 1.6em;
+    background: none;
+}
+
+.exe-export .box .box-content {
+    padding: 0.4em 0 0;
+    background: none;
+    border: 0;
+    border-radius: 0;
+}
+
+.exe-content figure figcaption {
+    font-style: italic;
+    color: var(--book-muted);
+}
+
+.exe-content img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Table of contents with dot leaders and section numbers */
+#siteNav ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: book-section;
+}
+
+#siteNav ul ul {
+    margin: 0;
+    padding-left: 1.1em;
+    font-size: 0.94em;
+    counter-reset: none;
+}
+
+#siteNav .other-section {
+    display: block;
+}
+
+#siteNav li {
+    margin: 0;
+}
+
+#siteNav a {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 7px 0;
+    color: var(--book-ink);
+    text-decoration: none;
+    counter-increment: book-section;
+}
+
+#siteNav a::before {
+    content: "";
+    order: 1;
+    flex: 1;
+    border-bottom: 1px dotted #b9ad96;
+}
+
+#siteNav a::after {
+    content: counter(book-section);
+    order: 2;
+}
+
+#siteNav a:hover,
+#siteNav a:focus {
+    color: var(--book-accent);
+}
+
+#siteNav a.active {
+    color: var(--book-accent);
+    font-weight: 600;
+}
+
+/* ===================================================================
+ * Without JavaScript (and while printing): a scrolling sheet of paper
+ * =================================================================== */
+
+html:not(.book-paged) body.exe-web-site .exe-content {
+    max-width: 50rem;
+    margin: 32px auto;
+    padding: 40px 48px;
+    box-shadow: 0 24px 48px -16px #3b2a1a73;
+}
+
+html:not(.book-paged) .exe-web-site #siteNav {
+    margin-bottom: 2em;
+}
+
+html:not(.book-paged) .exe-web-site .page-counter {
+    float: right;
+}
+
+/* ===================================================================
+ * Paged book (style.js adds html.book-paged before the first paint)
+ * =================================================================== */
+
+html.book-paged:has(> body.exe-web-site),
+html.book-paged body.exe-web-site {
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Marks the end of the text, to count the pages */
+.book-end-of-text {
+    display: block;
+    height: 0;
+    margin: 0;
+    break-before: avoid;
+}
+
+html.book-paged body.exe-web-site {
+    background:
+        radial-gradient(ellipse 60% 55% at 50% 40%, #e6ddcf 0%, #e6ddcf00 75%),
+        var(--book-desk);
+}
+
+/* The open book; the edges of the pages read and still to read show at both sides */
+html.book-paged .exe-web-site .exe-content {
+    --book-read: 0;
+    --book-margin: 64px;
+    position: relative;
+    width: min(1240px, 100vw - 144px);
+    height: calc(100vh - 72px);
+    height: calc(100dvh - 72px);
+    max-width: none;
+    min-height: 0;
+    margin: 36px auto;
+    padding: 0;
+    box-sizing: border-box;
+    background: var(--book-paper);
+    border-radius: 3px;
+    box-shadow: 0 1px 2px #3b2a1a33, 0 30px 60px -20px #3b2a1a8c;
+}
+
+html.book-paged .exe-web-site .exe-content::before,
+html.book-paged .exe-web-site .exe-content::after {
+    content: "";
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    pointer-events: none;
+    background: repeating-linear-gradient(90deg, #fffdf7 0 1px, #d3c8b2 1px 2px);
+    box-shadow: 0 20px 30px -18px #3b2a1a80;
+}
+
+html.book-paged .exe-web-site .exe-content::before {
+    right: 100%;
+    width: calc(3px + 14px * var(--book-read));
+    border-radius: 4px 0 0 4px;
+}
+
+html.book-paged .exe-web-site .exe-content::after {
+    left: 100%;
+    width: calc(3px + 14px * (1 - var(--book-read)));
+    border-radius: 0 4px 4px 0;
+}
+
+/* The text runs in columns: each column is a page, the gap is the spine */
+html.book-paged .exe-web-site main.page {
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    padding: 76px var(--book-margin) 80px;
+    overflow: hidden;
+    columns: 2;
+    column-gap: calc(2 * var(--book-margin));
+    column-fill: auto;
+    background:
+        linear-gradient(90deg, #3b2a1a00 calc(50% - 90px), #3b2a1a0a calc(50% - 36px), #3b2a1a2e 50%, #3b2a1a0a calc(50% + 36px), #3b2a1a00 calc(50% + 90px)),
+        var(--book-paper);
+    border-radius: 3px;
+    view-transition-name: book-page;
+}
+
+html.book-paged .exe-web-site main.page > :not(.book-head, .book-folio, .book-end),
+html.book-paged .exe-web-site .page-content {
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+/* The running heads and the folios replace these */
+html.book-paged .exe-web-site .package-header,
+html.book-paged .exe-web-site .page-counter,
+html.book-paged .exe-web-site .nav-buttons,
+html.book-paged .exe-web-site #made-with-eXe {
+    display: none;
+}
+
+/* Keep things whole on a page */
+html.book-paged .exe-web-site main.page :is(figure, img, table, pre, blockquote, li, .exe-figure) {
+    break-inside: avoid;
+}
+
+html.book-paged .exe-web-site main.page :is(h1, h2, h3, h4, .box-head) {
+    break-after: avoid;
+}
+
+html.book-paged .exe-web-site main.page img {
+    max-height: calc(var(--book-col-h, 60vh) - 3em);
+    width: auto;
+    object-fit: contain;
+}
+
+/* Boxes and text flow across pages (a scrolling box could not be split) */
+html.book-paged .exe-web-site main.page :is(.box, .box-content, .idevice_node.text) {
+    overflow: visible;
+}
+
+/* An activity is never split; one taller than a page scrolls inside it */
+html.book-paged .exe-web-site main.page .idevice_node:not(.text) {
+    break-inside: avoid;
+    /* Room for the box padding, or it would not fit on any page */
+    max-height: calc(var(--book-col-h, 100vh) - 3em);
+    overflow: auto;
+}
+
+/* Running heads and folios: printed on the page (inside main), so they turn with it.
+   --book-scroll keeps them on the visible double page. */
+.book-head,
+.book-folio {
+    position: absolute;
+    z-index: 1;
+    width: 50%;
+    break-inside: avoid;
+    margin: 0;
+    color: var(--book-muted);
+    font-family: var(--book-serif);
+    text-align: center;
+    pointer-events: none;
+}
+
+.book-head {
+    top: 32px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    box-sizing: border-box;
+    padding: 0 var(--book-margin);
+    font-size: 13px;
+}
+
+.book-head-left {
+    left: var(--book-scroll, 0px);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    font-variant: small-caps;
+    text-transform: lowercase;
+}
+
+.book-head-right {
+    left: calc(var(--book-scroll, 0px) + 50%);
+    font-style: italic;
+}
+
+.book-folio {
+    bottom: 30px;
+    font-size: 14px;
+    font-style: italic;
+}
+
+.book-folio-left {
+    left: var(--book-scroll, 0px);
+    text-align: left;
+    padding-left: var(--book-margin);
+    box-sizing: border-box;
+}
+
+.book-folio-right {
+    left: calc(var(--book-scroll, 0px) + 50%);
+    text-align: right;
+    padding-right: var(--book-margin);
+    box-sizing: border-box;
+}
+
+/* End of the section on an empty right-hand page */
+.book-end {
+    position: absolute;
+    z-index: 1;
+    top: 50%;
+    left: calc(var(--book-scroll, 0px) + 50%);
+    width: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    color: var(--book-muted);
+    font-family: var(--book-serif);
+    text-align: center;
+    transform: translateY(-50%);
+}
+
+.book-end[hidden] {
+    display: none;
+}
+
+.book-end a {
+    font-style: italic;
+    color: var(--book-accent);
+}
+
+/* Turn-the-page corners: they fold up under the pointer */
+.book-corner {
+    --book-curl: 26px;
+    position: absolute;
+    z-index: 3;
+    bottom: 0;
+    width: 88px;
+    height: 88px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+}
+
+.book-corner[hidden] {
+    display: none;
+}
+
+.book-corner:hover,
+.book-corner:focus-visible {
+    --book-curl: 78px;
+}
+
+.book-corner:focus-visible {
+    outline: 2px solid var(--book-ink);
+    outline-offset: -6px;
+}
+
+.book-corner-next {
+    right: 0;
+    border-bottom-right-radius: 3px;
+    filter: drop-shadow(-2px -2px 3px #3b2a1a47);
+}
+
+.book-corner-prev {
+    left: 0;
+    border-bottom-left-radius: 3px;
+    filter: drop-shadow(2px -2px 3px #3b2a1a47);
+}
+
+/* ::after is the page underneath, uncovered by the lifted corner; ::before is the flap */
+.book-corner::before,
+.book-corner::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    width: var(--book-curl);
+    height: var(--book-curl);
+    transition: width 0.25s ease-out, height 0.25s ease-out;
+}
+
+.book-corner-next::before,
+.book-corner-next::after {
+    right: 0;
+}
+
+.book-corner-prev::before,
+.book-corner-prev::after {
+    left: 0;
+}
+
+.book-corner-next::after {
+    background: var(--book-under);
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+
+.book-corner-next::before {
+    z-index: 1;
+    background: linear-gradient(to top left, #cfc2a8, #f2ebdc 45%, #fffdf8);
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+.book-corner-prev::after {
+    background: var(--book-under);
+    clip-path: polygon(0 0, 100% 100%, 0 100%);
+}
+
+.book-corner-prev::before {
+    z-index: 1;
+    background: linear-gradient(to top right, #cfc2a8, #f2ebdc 45%, #fffdf8);
+    clip-path: polygon(0 0, 100% 0, 100% 100%);
+}
+
+.book-corner span {
+    position: absolute;
+    clip: rect(1px, 1px, 1px, 1px);
+}
+
+/* Ribbon bookmark sticking out of the top of the book: opens the index */
+.book-ribbon {
+    position: fixed;
+    z-index: 30;
+    top: 28px;
+    right: calc(max(72px, (100vw - 1240px) / 2) + 16px);
+    width: 34px;
+    height: 104px;
+    padding: 0;
+    border: 0;
+    cursor: pointer;
+    background: linear-gradient(90deg, #6d2420, var(--book-accent) 35%, #a1443c 62%, #71261f);
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 84%, 0 100%);
+    filter: drop-shadow(0 2px 2px #3b2a1a59);
+    transition: height 0.2s ease-out;
+}
+
+.book-ribbon:hover,
+.book-ribbon:focus-visible,
+.book-index-open .book-ribbon {
+    height: 120px;
+}
+
+.book-ribbon:focus-visible {
+    outline: 2px solid var(--book-ink);
+    outline-offset: 3px;
+}
+
+.book-ribbon span {
+    position: absolute;
+    clip: rect(1px, 1px, 1px, 1px);
+}
+
+/* The index card */
+.book-index {
+    position: fixed;
+    z-index: 25;
+    top: 36px;
+    right: calc(max(72px, (100vw - 1240px) / 2) + 8px);
+    width: min(388px, 100vw - 32px);
+    max-height: calc(100vh - 72px);
+    max-height: calc(100dvh - 72px);
+    overflow: auto;
+    box-sizing: border-box;
+    padding: 112px 26px 22px;
+    font-family: var(--book-serif);
+    font-size: 16px;
+    color: var(--book-ink);
+    background: linear-gradient(180deg, #f3ecdd, var(--book-paper) 130px);
+    border-radius: 0 0 6px 6px;
+    box-shadow: 0 1px 3px #3b2a1a40, 0 24px 50px -16px #3b2a1a99;
+    transform: translateY(-12px);
+    opacity: 0;
+    visibility: hidden;
+    transition: transform 0.3s ease-out, opacity 0.2s ease-out, visibility 0s 0.3s;
+}
+
+.book-index-open .book-index {
+    transform: none;
+    opacity: 1;
+    visibility: visible;
+    transition: transform 0.3s ease-out, opacity 0.2s ease-out;
+}
+
+.book-index-label {
+    margin: 0 0 6px;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    font-variant: small-caps;
+    text-transform: lowercase;
+    color: var(--book-muted);
+}
+
+.book-index #exe-client-search-form {
+    margin-bottom: 18px;
+}
+
+.book-index #exe-client-search-form .sr-av {
+    position: absolute;
+    clip: rect(1px, 1px, 1px, 1px);
+}
+
+.book-index #exe-client-search-text {
+    width: 100%;
+    min-height: 44px;
+    box-sizing: border-box;
+    padding: 0 12px;
+    border: 1px solid #c8bca5;
+    border-radius: 3px;
+    background: #fffdf8;
+    font: inherit;
+}
+
+.book-index #exe-client-search-submit {
+    position: absolute;
+    clip: rect(1px, 1px, 1px, 1px);
+}
+
+.book-index #siteFooter {
+    margin: 16px 0 0;
+    padding: 12px 0 0;
+    border-top: 1px solid #e3dac7;
+    font-size: 13px;
+    color: var(--book-muted);
+}
+
+.book-index #siteFooter #packageLicense {
+    margin: 0;
+    padding-left: 0;
+    background: none;
+}
+
+html.book-paged #made-with-eXe {
+    display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .book-corner::before,
+    .book-corner::after,
+    .book-ribbon,
+    .book-index {
+        transition: none;
+    }
+}
+
+/* Phones and narrow windows: one page at a time */
+@media (max-width: 899.98px) {
+    html.book-paged .exe-web-site .exe-content {
+        --book-margin: 24px;
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh;
+        margin: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    html.book-paged .exe-web-site .exe-content::before,
+    html.book-paged .exe-web-site .exe-content::after {
+        display: none;
+    }
+
+    html.book-paged .exe-web-site main.page {
+        padding-top: 72px;
+        padding-bottom: 76px;
+        columns: 1;
+        background: linear-gradient(90deg, #3b2a1a1f, #3b2a1a00 22px), var(--book-paper);
+        border-radius: 0;
+    }
+
+    .book-head,
+    .book-head-right {
+        top: 26px;
+        left: var(--book-scroll, 0px);
+        width: 100%;
+        padding-right: 80px;
+        text-align: left;
+    }
+
+    .book-head-left {
+        display: none;
+    }
+
+    .book-folio-left,
+    .book-end {
+        display: none;
+    }
+
+    .book-folio-right {
+        left: var(--book-scroll, 0px);
+        width: 100%;
+        padding: 0;
+        text-align: center;
+    }
+
+    .book-corner {
+        --book-curl: 30px;
+        width: 64px;
+        height: 64px;
+    }
+
+    .book-ribbon {
+        top: 0;
+        right: 24px;
+        height: 64px;
+    }
+
+    .book-ribbon:hover,
+    .book-ribbon:focus-visible,
+    .book-index-open .book-ribbon {
+        height: 76px;
+    }
+
+    .book-index {
+        top: 0;
+        right: 16px;
+        max-height: 100vh;
+        max-height: 100dvh;
+        padding-top: 92px;
+    }
+}
+
+/* ===================================================================
+ * Page turn: the sheet lifts by its corner and turns over the spine.
+ * style.js computes the fold; browsers without view transitions or
+ * with reduced motion just show the next page.
+ * =================================================================== */
+
+@media (prefers-reduced-motion: no-preference) {
+    @view-transition {
+        navigation: auto;
+    }
+}
+
+::view-transition-old(book-page),
+::view-transition-new(book-page),
+::view-transition-old(book-sheet-back) {
+    animation: none;
+    mix-blend-mode: normal;
+}
+
+::view-transition-old(book-sheet-back) {
+    transform-origin: 0 0;
+}
+
+html:active-view-transition-type(book-turn-old)::view-transition-old(book-page),
+html:active-view-transition-type(book-turn-new)::view-transition-new(book-page) {
+    z-index: 1;
+}
+
+/* The flap casts its shadow on the page underneath */
+::view-transition-group(book-sheet-back) {
+    z-index: 2;
+    filter: drop-shadow(-5px 4px 8px #3b2a1a61);
+}
+
+/* Back of the sheet (added by style.js only while the page turns) */
+.book-sheet-back {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    view-transition-name: book-sheet-back;
+    background: linear-gradient(135deg, #fffdf8, #f2ebdc 60%, #ddd2bb);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    ::view-transition-group(*),
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
+        animation: none !important;
+    }
+}
+
+@media print {
+    html.book-paged:has(> body.exe-web-site),
+    html.book-paged body.exe-web-site {
+        height: auto;
+        overflow: visible;
+        background: #fff;
+    }
+
+    html.book-paged .exe-web-site .exe-content {
+        width: auto;
+        height: auto;
+        margin: 0;
+        box-shadow: none;
+    }
+
+    html.book-paged .exe-web-site .exe-content::before,
+    html.book-paged .exe-web-site .exe-content::after,
+    .book-head,
+    .book-folio,
+    .book-end,
+    .book-corner,
+    .book-ribbon,
+    .book-index {
+        display: none;
+    }
+
+    html.book-paged .exe-web-site main.page {
+        position: static;
+        padding: 0;
+        overflow: visible;
+        columns: auto;
+        background: none;
+    }
+}
+
+/* "Edit with eXeLearning" link of the published example */
+.exe-open-exelearning { position: fixed; z-index: 40; left: 16px; top: 4px; padding: 7px 12px; display: flex; align-items: center; gap: 7px; border-radius: 4px; background: var(--book-paper); color: var(--book-ink) !important; border: 1px solid var(--book-accent); box-shadow: 0 6px 16px -6px #3b2a1a66; font: bold 13px/1.2 Helvetica, Arial, sans-serif; text-decoration: none !important; }
+.exe-open-logo { width: 20px; height: 20px; object-fit: contain; }
+.exe-open-exelearning:focus, .exe-open-exelearning:hover { background: #f3ecdd; outline: 2px solid var(--book-accent); }
+.exe-open-close { position: absolute; right: -9px; top: -9px; width: 22px; height: 22px; padding: 0; border: 1px solid var(--book-accent); border-radius: 50%; background: var(--book-paper); color: var(--book-ink); font: bold 14px/19px Helvetica, Arial, sans-serif; cursor: pointer; }
+@media (max-width: 899.98px) { .exe-open-exelearning { display: none; } }

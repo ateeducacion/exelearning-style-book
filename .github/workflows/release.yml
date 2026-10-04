@@ -1,0 +1,77 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build theme ZIP
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build theme ZIP (exelearning-style-book-${{ steps.ver.outputs.version }}.zip)
+        run: |
+          python3 scripts/build_water_cycle.py
+          python3 scripts/check.py
+          cp dist/book.zip "exelearning-style-book-${{ steps.ver.outputs.version }}.zip"
+          cp dist/book.zip book.zip
+
+      - name: Publish release assets
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          name: Libro ${{ steps.ver.outputs.version }}
+          body: |
+            ## Libro — tema eXeLearning
+
+            Estilo para eXeLearning 4 que presenta el recurso como un libro
+            abierto: páginas de libro sin desplazamiento, paso de página desde
+            las esquinas e índice en una cinta de marcapáginas.
+
+            **Artefacto de esta release:**
+
+            - `exelearning-style-book-${{ steps.ver.outputs.version }}.zip`
+              Contenido de `theme/` listo para importar desde *Herramientas
+              → Gestor de estilos → Importar estilo*.
+
+            El recurso de ejemplo ("El ciclo del agua") se sirve
+            directamente desde la raíz del repo a través de
+            `github-proxy.exelearning.dev`:
+
+            https://static.exelearning.dev/?url=https://github-proxy.exelearning.dev/?repo=ateeducacion/exelearning-style-book&branch=main
+
+            Elaborado por el **Área de Tecnología Educativa**.
+          files: |
+            exelearning-style-book-${{ steps.ver.outputs.version }}.zip
+            book.zip
+            dist/ciclo-del-agua.elpx
+          draft: false
+          prerelease: false
+
+      - name: Upload CI artefacts (non-tag builds)
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: book-${{ steps.ver.outputs.version }}
+          path: |
+            exelearning-style-book-${{ steps.ver.outputs.version }}.zip
+            book.zip
+            dist/ciclo-del-agua.elpx
+          if-no-files-found: error

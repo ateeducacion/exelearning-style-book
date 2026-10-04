@@ -1,0 +1,19 @@
+# Line endings
+* text=auto eol=lf
+*.otf binary
+*.png binary
+*.jpg binary
+*.gif binary
+*.zip binary
+*.elpx binary
+
+# ---------------------------------------------------------------
+# Archivos que NO deben ir en `git archive` (tarball oficial):
+# el README, el handoff y la referencia son para el repo de
+# desarrollo, no para el paquete final.
+# ---------------------------------------------------------------
+reference/         export-ignore
+/demo.html         export-ignore
+/GITARCHIVE.md     export-ignore
+
+*.woff2 binary

@@ -1,0 +1,11 @@
+.omc/
+.DS_Store
+.claude/
+
+# Local build and verification files
+dist/
+node_modules/
+__pycache__/
+*.pyc
+/exelearning-style-book-*.zip
+/book.zip
