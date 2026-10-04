@@ -76,7 +76,10 @@ artefactos; con una etiqueta se adjuntan a la release.
 El estilo deriva del estilo Default de eXeLearning (Ignacio Gros, exelearning.net)
 y conserva su licencia CC BY-SA 4.0, igual que los iconos de iDevices de Francisco
 Javier Pulido Cuadrado. Literata, de The Literata Project Authors, bajo
-[SIL OFL 1.1](theme/fonts/OFL.txt). Unidad didáctica e ilustraciones reutilizadas
+[SIL OFL 1.1](theme/fonts/OFL.txt). Unidad didáctica reutilizada
 del estilo Spectrum 128K del Área de Tecnología Educativa del Gobierno de Canarias,
-bajo CC0 1.0. Los archivos de eXeLearning y sus bibliotecas conservan sus licencias
+bajo CC0 1.0. Las 11 ilustraciones del ejemplo se han regenerado con la herramienta
+ImageGen en acuarela y tinta; los prompts están en
+[scripts/illustration-prompts.json](scripts/illustration-prompts.json).
+Los archivos de eXeLearning y sus bibliotecas conservan sus licencias
 originales.
