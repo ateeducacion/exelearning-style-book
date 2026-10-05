@@ -82,11 +82,14 @@ Estilos de eXeLearning del Área de Tecnología Educativa. Cada repositorio incl
 
 <table>
   <tr>
-    <td align="center" width="20%"><a href="https://github.com/ateeducacion/exelearning-style-book"><img src="https://raw.githubusercontent.com/ateeducacion/exelearning-style-book/main/.github/screenshot.png" alt="Estilo Libro"><br><b>Libro</b></a><br><sub>Libro abierto con paso de página</sub></td>
-    <td align="center" width="20%"><a href="https://github.com/ateeducacion/exelearning-style-pocket"><img src="https://raw.githubusercontent.com/ateeducacion/exelearning-style-pocket/main/.github/screenshot.png" alt="Estilo Pocket"><br><b>Pocket</b></a><br><sub>Consola portátil de pantalla verde</sub></td>
-    <td align="center" width="20%"><a href="https://github.com/ateeducacion/exelearning-style-hacker"><img src="https://raw.githubusercontent.com/ateeducacion/exelearning-style-hacker/main/.github/screenshot.png" alt="Estilo Hacker"><br><b>Hacker</b></a><br><sub>Terminal con Matrix, Tron y PipBoy</sub></td>
-    <td align="center" width="20%"><a href="https://github.com/ateeducacion/exelearning-style-spectrum128k"><img src="https://raw.githubusercontent.com/ateeducacion/exelearning-style-spectrum128k/main/.github/screenshot.png" alt="Estilo Spectrum 128K"><br><b>Spectrum 128K</b></a><br><sub>ZX Spectrum con franjas y CRT</sub></td>
-    <td align="center" width="20%"><a href="https://github.com/ateeducacion/exelearning-style-scumm"><img src="https://raw.githubusercontent.com/ateeducacion/exelearning-style-scumm/main/.github/screenshot.png" alt="Estilo SCUMM Adventure"><br><b>SCUMM Adventure</b></a><br><sub>Aventura gráfica con verbos e inventario</sub></td>
+    <td align="center" width="33%"><a href="https://github.com/ateeducacion/exelearning-style-book"><img src="https://raw.githubusercontent.com/ateeducacion/exelearning-style-book/main/.github/screenshot.png" alt="Estilo Libro"><br><b>Libro</b></a><br><sub>Libro abierto con paso de página</sub></td>
+    <td align="center" width="33%"><a href="https://github.com/ateeducacion/exelearning-style-pocket"><img src="https://raw.githubusercontent.com/ateeducacion/exelearning-style-pocket/main/.github/screenshot.png" alt="Estilo Pocket"><br><b>Pocket</b></a><br><sub>Consola portátil de pantalla verde</sub></td>
+    <td align="center" width="33%"><a href="https://github.com/ateeducacion/exelearning-style-hacker"><img src="https://raw.githubusercontent.com/ateeducacion/exelearning-style-hacker/main/.github/screenshot.png" alt="Estilo Hacker"><br><b>Hacker</b></a><br><sub>Terminal con Matrix, Tron y PipBoy</sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="33%"><a href="https://github.com/ateeducacion/exelearning-style-spectrum128k"><img src="https://raw.githubusercontent.com/ateeducacion/exelearning-style-spectrum128k/main/.github/screenshot.png" alt="Estilo Spectrum 128K"><br><b>Spectrum 128K</b></a><br><sub>ZX Spectrum con franjas y CRT</sub></td>
+    <td align="center" width="33%"><a href="https://github.com/ateeducacion/exelearning-style-scumm"><img src="https://raw.githubusercontent.com/ateeducacion/exelearning-style-scumm/main/.github/screenshot.png" alt="Estilo SCUMM Adventure"><br><b>SCUMM Adventure</b></a><br><sub>Aventura gráfica con verbos e inventario</sub></td>
+    <td align="center" width="33%"><a href="https://github.com/ateeducacion/exelearning-style-boost"><img src="https://raw.githubusercontent.com/ateeducacion/exelearning-style-boost/main/.github/screenshot.png" alt="Estilo Boost"><br><b>Boost</b></a><br><sub>Moodle Boost con índice del curso</sub></td>
   </tr>
 </table>
 
