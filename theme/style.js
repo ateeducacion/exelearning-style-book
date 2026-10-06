@@ -590,7 +590,6 @@
     }
 
     function init() {
-        addOpenLink();
         if (!paged) return;
         book = document.querySelector('.exe-web-site .exe-content');
         main = book && book.querySelector('main.page');
@@ -606,33 +605,6 @@
         if (take(LAND_KEY) === stripUrl(location.href)) spread = spreads - 1;
         else if (hash && main.contains(hash)) spread = spreadOf(hash);
         show();
-    }
-
-    /* ---------- "Edit with eXeLearning" link of the published example ---------- */
-
-    function addOpenLink() {
-        if (!document.querySelector('.exe-export') || document.querySelector('.exe-open-exelearning')) return;
-        if (window.self !== window.top) return;
-        var script = document.querySelector('script[src$="theme/style.js"]');
-        var link = element('a', 'exe-open-exelearning');
-        link.href = 'https://static.exelearning.dev/?url=https://github-proxy.exelearning.dev/?repo=ateeducacion/exelearning-style-book&branch=main';
-        link.target = '_blank';
-        link.rel = 'noopener';
-        var logo = element('img', 'exe-open-logo');
-        logo.alt = '';
-        logo.src = new URL('icons/exe-logo.svg', script ? script.src : location.href).href;
-        link.append(logo, element('span', '', 'Edit with eXeLearning'));
-        link.setAttribute('aria-label', 'Abrir este recurso en eXeLearning');
-        var close = element('button', 'exe-open-close', '×');
-        close.type = 'button';
-        close.setAttribute('aria-label', 'Ocultar enlace de eXeLearning');
-        close.addEventListener('click', function (event) {
-            event.preventDefault();
-            event.stopPropagation();
-            link.remove();
-        });
-        link.append(close);
-        document.body.append(link);
     }
 
     // After eXeLearning's own ready handlers, which build the search form.

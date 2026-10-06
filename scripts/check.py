@@ -45,4 +45,5 @@ for page in [root / "index.html", *sorted((root / "html").glob("*.html"))]:
 with zipfile.ZipFile(root / "dist/book.zip") as archive:
     assert {"config.xml", "style.css", "style.js", "screenshot.png"} <= set(archive.namelist())
     assert not any(name.startswith("theme/") for name in archive.namelist())
+    assert b"exe-open-exelearning" not in archive.read("style.js") + archive.read("style.css"), "The edit link must not ship in the style"
 print(f"PASS: {len(pages)} pages, source JSON, local references and importable theme ZIP.")

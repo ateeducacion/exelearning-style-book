@@ -18,6 +18,12 @@ with zipfile.ZipFile(dist / "book.zip", "w", zipfile.ZIP_DEFLATED) as archive:
         if file.is_file() and not file.name.startswith("."):
             archive.write(file, file.relative_to(theme))
 shutil.copy2(dist / "book.zip", root / "content/resources/book.zip")
+# The "Edit with eXeLearning" link belongs to this published example only, never to the style.
+for page in [root / "index.html", *(root / "html").glob("*.html")]:
+    html = page.read_text()
+    if "edit-in-exelearning.js" not in html:
+        prefix = "" if page.parent == root else "../"
+        page.write_text(html.replace("</head>", f'<script src="{prefix}edit-in-exelearning.js" defer></script>\n</head>', 1))
 files = [root / name for name in ("index.html", "content.xml", "content.dtd", "search_index.js", "screenshot.png")]
 for directory in ("theme", "content", "html", "idevices", "libs"):
     files.extend(file for file in (root / directory).rglob("*") if file.is_file() and not file.name.startswith("."))

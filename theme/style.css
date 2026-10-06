@@ -1373,10 +1373,3 @@ html:active-view-transition-type(book-turn-new)::view-transition-new(book-page) 
         background: none;
     }
 }
-
-/* "Edit with eXeLearning" link of the published example */
-.exe-open-exelearning { position: fixed; z-index: 40; left: 16px; top: 4px; padding: 7px 12px; display: flex; align-items: center; gap: 7px; border-radius: 4px; background: var(--book-paper); color: var(--book-ink) !important; border: 1px solid var(--book-accent); box-shadow: 0 6px 16px -6px #3b2a1a66; font: bold 13px/1.2 Helvetica, Arial, sans-serif; text-decoration: none !important; }
-.exe-open-logo { width: 20px; height: 20px; object-fit: contain; }
-.exe-open-exelearning:focus, .exe-open-exelearning:hover { background: #f3ecdd; outline: 2px solid var(--book-accent); }
-.exe-open-close { position: absolute; right: -9px; top: -9px; width: 22px; height: 22px; padding: 0; border: 1px solid var(--book-accent); border-radius: 50%; background: var(--book-paper); color: var(--book-ink); font: bold 14px/19px Helvetica, Arial, sans-serif; cursor: pointer; }
-@media (max-width: 899.98px) { .exe-open-exelearning { display: none; } }
