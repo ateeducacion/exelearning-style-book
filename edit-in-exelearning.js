@@ -1,7 +1,7 @@
 /* "Edit with eXeLearning" link of the published example. Not part of the style:
    package.py adds it to the example's HTML only, so exported resources never carry it. */
 (function () {
-    if (window.self !== window.top || document.querySelector('.exe-open-exelearning')) return;
+    if (document.querySelector('.exe-open-exelearning')) return;
     var style = document.createElement('style');
     style.textContent = '.exe-open-exelearning { position: fixed; z-index: 40; left: 16px; top: 4px; padding: 7px 12px; display: flex; align-items: center; gap: 7px; border-radius: 4px; background: var(--book-paper); color: var(--book-ink) !important; border: 1px solid var(--book-accent); box-shadow: 0 6px 16px -6px #3b2a1a66; font: bold 13px/1.2 Helvetica, Arial, sans-serif; text-decoration: none !important; }'
         + '.exe-open-exelearning svg { width: 20px; height: 20px; }'
