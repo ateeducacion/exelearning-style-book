@@ -94,6 +94,9 @@ Estilos de eXeLearning del Área de Tecnología Educativa. Cada repositorio incl
     <td align="center" width="33%"><a href="https://github.com/ateeducacion/exelearning-style-scumm"><img src="https://raw.githubusercontent.com/ateeducacion/exelearning-style-scumm/main/.github/screenshot.png" alt="Estilo SCUMM Adventure"><br><b>SCUMM Adventure</b></a><br><sub>Aventura gráfica con verbos e inventario</sub></td>
     <td align="center" width="33%"><a href="https://github.com/ateeducacion/exelearning-style-boost"><img src="https://raw.githubusercontent.com/ateeducacion/exelearning-style-boost/main/.github/screenshot.png" alt="Estilo Boost"><br><b>Boost</b></a><br><sub>Moodle Boost con índice del curso</sub></td>
   </tr>
+  <tr>
+    <td align="center" width="33%"><a href="https://github.com/ateeducacion/exelearning-style-teletext"><img src="https://raw.githubusercontent.com/ateeducacion/exelearning-style-teletext/main/.github/screenshot.png" alt="Estilo eXeTexto"><br><b>eXeTexto</b></a><br><sub>Teletexto con páginas numeradas</sub></td>
+  </tr>
 </table>
 
 Los estilos oficiales para los centros educativos de Canarias (Flux, Nova y REF) están en [exelearning-styles-canarias](https://github.com/ateeducacion/exelearning-styles-canarias).
