@@ -1227,7 +1227,8 @@ html.book-paged #made-with-eXe {
 }
 
 /* Phones and narrow windows: one page at a time */
-@media (max-width: 899.98px) {
+/* Narrow or tall screens (also a phone in desktop-site mode) read one page at a time */
+@media (max-width: 899.98px), (max-aspect-ratio: 3/4) {
     html.book-paged .exe-web-site .exe-content {
         --book-margin: 24px;
         width: 100vw;
