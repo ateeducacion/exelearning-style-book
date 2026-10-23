@@ -1009,7 +1009,18 @@ html.book-paged .exe-web-site main.page .idevice_node:not(.text) {
     padding: 0;
     border: 0;
     background: none;
-    cursor: pointer;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+}
+
+.book-dragging .book-corner {
+    cursor: grabbing;
+}
+
+.book-dragging .book-corner::before,
+.book-dragging .book-corner::after {
+    transition: none;
 }
 
 .book-corner[hidden] {
@@ -1300,6 +1311,10 @@ html.book-paged #made-with-eXe {
     }
 }
 
+::view-transition {
+    pointer-events: none;
+}
+
 ::view-transition-old(book-page),
 ::view-transition-new(book-page),
 ::view-transition-old(book-sheet-back) {
@@ -1309,6 +1324,7 @@ html.book-paged #made-with-eXe {
 
 ::view-transition-old(book-sheet-back) {
     transform-origin: 0 0;
+    opacity: 1;
 }
 
 html:active-view-transition-type(book-turn-old)::view-transition-old(book-page),
@@ -1316,10 +1332,10 @@ html:active-view-transition-type(book-turn-new)::view-transition-new(book-page) 
     z-index: 1;
 }
 
-/* The flap casts its shadow on the page underneath */
+/* Geometry supplies the fold-aligned shadow on every frame. */
 ::view-transition-group(book-sheet-back) {
     z-index: 2;
-    filter: drop-shadow(-5px 4px 8px #3b2a1a61);
+    pointer-events: none;
 }
 
 /* Back of the sheet (added by style.js only while the page turns) */
@@ -1328,7 +1344,7 @@ html:active-view-transition-type(book-turn-new)::view-transition-new(book-page) 
     inset: 0;
     pointer-events: none;
     view-transition-name: book-sheet-back;
-    background: linear-gradient(135deg, #fffdf8, #f2ebdc 60%, #ddd2bb);
+    background: linear-gradient(90deg, #b5a68a, #f3ecdd 18%, #fffdf8 42%, #eee4cf 80%, #c6b99d);
 }
 
 @media (prefers-reduced-motion: reduce) {

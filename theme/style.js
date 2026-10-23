@@ -32,6 +32,7 @@
     var rightEmpty = false;
     var running = null;
     var scheduled = false;
+    var dragging = null;
 
     /* ---------- Small helpers ---------- */
 
@@ -159,80 +160,84 @@
     }
 
     /*
-     * A sheet of width W hinged on the spine x0, lifted by its bottom outer corner C.
-     * The corner travels in an arc to the far side of the spine; the paper folds along
-     * the perpendicular bisector of C and the corner, and the folded part, reflected
-     * across that line, is the back of the sheet (the flap).
+     * Independent paper geometry: the perpendicular bisector of the resting and
+     * lifted corner is the fold. A narrow, opaque band describes the curved back;
+     * the part already laid down reveals the destination snapshot. The band gets
+     * narrower as the paper flattens, rather than fading a whole blank sheet out.
+     * No activity DOM is copied: both faces remain browser-owned snapshots.
      */
-    function foldFrames(x0, width, dir, height) {
+    function foldAt(plan, progress, lift) {
+        var t = plan.reverse ? 1 - progress : progress;
+        var width = plan.width;
+        var height = plan.height;
+        var dir = plan.dir;
+        var x0 = plan.spine;
         var sheet = dir > 0 ? rect(x0, x0 + width, height) : rect(x0 - width, x0, height);
-        var other = dir > 0 ? rect(x0 - width, x0, height) : rect(x0, x0 + width, height);
+        var other = plan.columns > 1 ? (dir > 0 ? rect(0, x0, height) : rect(x0, 2 * width, height)) : [];
         var corner = { x: x0 + dir * width, y: height };
-        var end = { x: x0 - dir * width, y: height };
-        var lift = Math.min(width, height) * 0.2;
-        var frames = { sheet: [], under: [], flap: [] };
-        for (var i = 0; i <= FRAMES; i++) {
-            var t = i / FRAMES;
-            var e = (1 - Math.cos(Math.PI * t)) / 2;
-            var late = t >= 0.85;
-            var to = { x: corner.x + (end.x - corner.x) * e, y: height - lift * Math.sin(Math.PI * e) };
-            var dx = to.x - corner.x;
-            var dy = to.y - corner.y;
-            var length = Math.hypot(dx, dy);
-            var shade = { offset: t, filter: 'brightness(' + (0.82 + 0.18 * e).toFixed(3) + ')' };
-            if (length < 0.5) {
-                frames.sheet.push({ offset: t, clipPath: path([sheet, other]) });
-                frames.under.push(Object.assign({ clipPath: path([]) }, shade));
-                frames.flap.push({ offset: t, clipPath: 'polygon(0 0, 0 0, 0 0)', transform: 'matrix(1, 0, 0, 1, 0, 0)', opacity: 1 });
-                continue;
-            }
-            var n = { x: dx / length, y: dy / length };
-            var middle = { x: (corner.x + to.x) / 2, y: (corner.y + to.y) / 2 };
-            var keep = clip(sheet, middle, n);
-            var fold = clip(sheet, middle, { x: -n.x, y: -n.y });
-            // Reflection across the fold: X' = X - 2((X - M) · n) n
-            var d = 2 * (middle.x * n.x + middle.y * n.y);
-            var matrix = [1 - 2 * n.x * n.x, -2 * n.x * n.y, -2 * n.x * n.y, 1 - 2 * n.y * n.y, d * n.x, d * n.y];
-            frames.sheet.push({ offset: t, clipPath: path(late ? [keep] : [keep, other]) });
-            frames.under.push(Object.assign({ clipPath: path(late ? [fold, other] : [fold]) }, shade));
-            frames.flap.push({
-                offset: t,
-                clipPath: fold.length > 2 ? 'polygon(' + points(fold) + ')' : 'polygon(0 0, 0 0, 0 0)',
-                transform:
-                    'matrix(' +
-                    matrix
-                        .map(function (v) {
-                            return v.toFixed(4);
-                        })
-                        .join(', ') +
-                    ')',
-                // The sheet lies down on the other page and becomes it.
-                opacity: late ? (1 - t) / 0.15 : 1,
-            });
-        }
-        return frames;
-    }
-
-    /*
-     * Two pages: going forward the right-hand sheet turns to the left, going back the
-     * left-hand sheet turns to the right; the outgoing page is the sheet. One page:
-     * going back, the previous page comes in from the left, so the incoming page is
-     * the sheet and the turn plays backwards.
-     */
-    function turnPlan(forward, cols, width, height) {
-        if (cols > 1) {
+        var to = { x: corner.x - dir * 2 * width * t, y: height - lift * Math.sin(Math.PI * t) };
+        var dx = to.x - corner.x;
+        var dy = to.y - corner.y;
+        var length = Math.hypot(dx, dy);
+        var empty = 'polygon(0px 0px, 0px 0px, 0px 0px)';
+        if (length < 0.01 || t >= 1) {
             return {
-                sheet: 'old',
-                under: 'new',
-                reverse: false,
-                frames: foldFrames(width / 2, width / 2, forward ? 1 : -1, height),
+                sheet: { clipPath: path(t < 0.5 ? [sheet, other] : []) },
+                under: { clipPath: path(t < 0.5 ? [] : [sheet, other]) },
+                flap: { clipPath: empty, transform: 'matrix(1, 0, 0, 1, 0, 0)' },
+                shadow: { filter: 'drop-shadow(0px 0px 0px rgba(59, 42, 26, 0))' },
             };
         }
+        var n = { x: dx / length, y: dy / length };
+        var tangent = { x: -n.y, y: n.x };
+        var middle = { x: (corner.x + to.x) / 2, y: (corner.y + to.y) / 2 };
+        var keep = clip(sheet, middle, n);
+        var folded = clip(sheet, middle, { x: -n.x, y: -n.y });
+        var reflected = folded.map(function (p) {
+            var d = 2 * ((p.x - middle.x) * n.x + (p.y - middle.y) * n.y);
+            return { x: p.x - d * n.x, y: p.y - d * n.y };
+        });
+        var curl = Math.max(0.01, Math.min(width * 0.24, lift * 0.65) * Math.sin(Math.PI * t));
+        var edge = { x: middle.x + n.x * curl, y: middle.y + n.y * curl };
+        var band = clip(reflected, edge, { x: -n.x, y: -n.y });
+        var reach = Math.hypot(plan.totalWidth, height);
+        var origin = { x: middle.x - tangent.x * reach, y: middle.y - tangent.y * reach };
+        // Put a fixed paper gradient in fold coordinates. Its light and dark edges
+        // rotate with the crease, including left turns and single-page reverse turns.
+        var local = band.map(function (p) {
+            var x = p.x - origin.x;
+            var y = p.y - origin.y;
+            return { x: (x * n.x + y * n.y) * plan.totalWidth / curl, y: (x * tangent.x + y * tangent.y) * height / (2 * reach) };
+        });
+        var matrix = [n.x * curl / plan.totalWidth, n.y * curl / plan.totalWidth,
+            tangent.x * 2 * reach / height, tangent.y * 2 * reach / height, origin.x, origin.y];
+        var resting = clip(other, to, { x: -dir, y: 0 });
+        var landed = clip(other, to, { x: dir, y: 0 });
+        var strength = Math.sin(Math.PI * t);
+        var blur = 1 + 12 * strength;
         return {
-            sheet: forward ? 'old' : 'new',
-            under: forward ? 'new' : 'old',
-            reverse: !forward,
-            frames: foldFrames(0, width, 1, height),
+            sheet: { clipPath: path([keep, resting]) },
+            under: { clipPath: path([folded, landed]) },
+            flap: { clipPath: local.length > 2 ? 'polygon(' + points(local) + ')' : empty,
+                transform: 'matrix(' + matrix.map(function (v) { return v.toFixed(6); }).join(', ') + ')' },
+            shadow: { filter: 'drop-shadow(' + (-n.x * 8 * strength).toFixed(2) + 'px ' +
+                (-n.y * 8 * strength).toFixed(2) + 'px ' + blur.toFixed(2) + 'px rgba(59, 42, 26, ' +
+                (0.38 * strength).toFixed(3) + '))' },
+        };
+    }
+
+    function turnPlan(forward, cols, width, height) {
+        return {
+            sheet: cols > 1 || forward ? 'old' : 'new',
+            under: cols > 1 || forward ? 'new' : 'old',
+            reverse: cols === 1 && !forward,
+            columns: cols,
+            totalWidth: width,
+            width: width / cols,
+            height: height,
+            spine: cols > 1 ? width / 2 : 0,
+            dir: cols > 1 && !forward ? -1 : 1,
+            lift: Math.min(width / cols, height) * 0.32,
         };
     }
 
@@ -243,14 +248,48 @@
         return /ms$/.test(value) ? number : number * 1000;
     }
 
-    function animateTurn(plan) {
-        var timing = { duration: duration(), easing: 'linear', fill: 'both', direction: plan.reverse ? 'reverse' : 'normal' };
-        var run = function (keyframes, pseudo) {
-            root.animate(keyframes, Object.assign({ pseudoElement: pseudo }, timing));
+    function animateTurn(plan, gesture) {
+        var pseudos = {
+            sheet: '::view-transition-' + plan.sheet + '(book-page)',
+            under: '::view-transition-' + plan.under + '(book-page)',
+            flap: '::view-transition-old(book-sheet-back)',
+            shadow: '::view-transition-group(book-sheet-back)',
         };
-        run(plan.frames.sheet, '::view-transition-' + plan.sheet + '(book-page)');
-        run(plan.frames.under, '::view-transition-' + plan.under + '(book-page)');
-        run(plan.frames.flap, '::view-transition-old(book-sheet-back)');
+        var animations = {};
+        Object.keys(pseudos).forEach(function (key) {
+            animations[key] = root.animate([], { duration: duration(), fill: 'both', pseudoElement: pseudos[key] });
+            animations[key].pause();
+            animations[key].finished.catch(noop);
+        });
+        var paint = function (progress, lift) {
+            var frame = foldAt(plan, progress, lift);
+            Object.keys(animations).forEach(function (key) {
+                animations[key].effect.setKeyframes([frame[key], frame[key]]);
+                animations[key].currentTime = 0;
+            });
+        };
+        var settle = function (from, to, lift, done) {
+            var frames = { sheet: [], under: [], flap: [], shadow: [] };
+            for (var i = 0; i <= FRAMES; i++) {
+                var ratio = i / FRAMES;
+                var frame = foldAt(plan, from + (to - from) * ratio, lift + (plan.lift - lift) * ratio);
+                Object.keys(frames).forEach(function (key) { frames[key].push(frame[key]); });
+            }
+            Object.keys(animations).forEach(function (key) {
+                var animation = animations[key];
+                animation.effect.setKeyframes(frames[key]);
+                animation.effect.updateTiming({ duration: Math.max(140, duration() * Math.abs(to - from)), easing: 'cubic-bezier(.3, 0, .2, 1)' });
+                animation.currentTime = 0;
+                animation.play();
+            });
+            Promise.all(Object.keys(animations).map(function (key) { return animations[key].finished; })).then(done || noop).catch(noop);
+        };
+        if (gesture) {
+            gesture.paint = paint;
+            gesture.settle = settle;
+            paint(gesture.progress, gesture.lift);
+            if (gesture.released) gesture.finish();
+        } else settle(0, 1, plan.lift);
     }
 
     function sheetBack() {
@@ -333,14 +372,15 @@
         parts.folioRight.textContent = columns > 1 ? prefix + (first + 1) : prefix + first;
         parts.folioRight.hidden = columns > 1 && last && rightEmpty;
         parts.end.hidden = !(last && rightEmpty);
-        parts.prev.hidden = spread === 0 && !neighbour('left');
-        parts.next.hidden = last && !neighbour('right');
+        parts.prev.hidden = spread === 0 && !neighbour('left') && !(dragging && dragging.button === parts.prev);
+        parts.next.hidden = last && !neighbour('right') && !(dragging && dragging.button === parts.next);
         var read = sections ? (section - 1 + (spread + 1) / spreads) / sections : (spread + 1) / spreads;
         book.style.setProperty('--book-read', Math.min(1, Math.max(0, read)).toFixed(3));
     }
 
     function layout() {
         scheduled = false;
+        if (dragging) dragging.cancel();
         if (!main) return;
         measure();
         show();
@@ -359,7 +399,9 @@
         return Math.min(spreads - 1, Math.max(0, Math.floor((x + 1) / main.clientWidth)));
     }
 
-    function turnTo(target) {
+    function turnTo(target, gesture) {
+        if (dragging && dragging !== gesture) return;
+        if (running) return;
         if (target < 0) {
             var previous = neighbour('left');
             if (previous) leave(previous, true);
@@ -375,14 +417,13 @@
         var update = function () {
             var back = book.querySelector('.book-sheet-back');
             if (back) back.remove();
-            spread = target;
+            spread = gesture && gesture.cancelled ? gesture.source : target;
             show();
         };
         if (!document.startViewTransition || reducedMotion()) {
             update();
             return;
         }
-        if (running) skip(running);
         var plan = turnPlan(forward, columns, main.clientWidth, main.clientHeight);
         book.append(sheetBack());
         var transition;
@@ -397,16 +438,104 @@
         running = transition;
         transition.ready
             .then(function () {
-                animateTurn(plan);
+                if (!gesture || !gesture.cancelled) animateTurn(plan, gesture);
             })
             .catch(function () {
-                /* Skipped: the new page is already shown. */
+                if (gesture) gesture.cancel();
             });
         transition.finished
             .catch(noop)
             .then(function () {
                 if (running === transition) running = null;
+                if (gesture && dragging === gesture) gesture.cancel();
             });
+    }
+
+    /* Pointer capture belongs only to the corner buttons, never to an iDevice.
+     * Snapshots may take a frame to become ready; the gesture keeps the latest
+     * position and release decision so a quick drag cannot get stuck in between.
+     */
+    function bindCorner(button, direction) {
+        var suppressClick = false;
+        button.addEventListener('click', function (event) {
+            if (suppressClick && event.detail) { suppressClick = false; return; }
+            turnTo(spread + direction);
+        });
+        button.addEventListener('pointerdown', function (event) {
+            if (!event.isPrimary || event.button !== 0 || running || dragging) return;
+            suppressClick = false;
+            var source = spread;
+            var target = source + direction;
+            var plan = turnPlan(direction > 0, columns, main.clientWidth, main.clientHeight);
+            var gesture = {
+                button: button, source: source, id: event.pointerId, x: event.clientX, y: event.clientY,
+                progress: 0, lift: plan.lift, moved: false, released: false,
+                interactive: target >= 0 && target < spreads && !!document.startViewTransition && !reducedMotion(),
+            };
+            var cleanup = function () {
+                if (dragging === gesture) dragging = null;
+                show();
+                root.classList.remove('book-dragging');
+                button.style.removeProperty('--book-curl');
+                if (button.hasPointerCapture(gesture.id)) button.releasePointerCapture(gesture.id);
+            };
+            gesture.cancel = function () {
+                gesture.released = true;
+                gesture.cancelled = true;
+                gesture.commit = false;
+                if (gesture.moved) suppressClick = true;
+                if (gesture.interactive && gesture.moved) {
+                    spread = source;
+                    show();
+                    if (running) skip(running);
+                }
+                cleanup();
+            };
+            gesture.finish = function () {
+                if (gesture.interactive && gesture.moved) {
+                    if (!gesture.settle) return;
+                    gesture.settle(gesture.progress, gesture.commit ? 1 : 0, gesture.lift, function () {
+                        if (!gesture.commit) { spread = source; show(); }
+                        cleanup();
+                    });
+                } else {
+                    cleanup();
+                    if (gesture.moved && gesture.commit) turnTo(target);
+                }
+            };
+            dragging = gesture;
+            button.setPointerCapture(event.pointerId);
+        });
+        button.addEventListener('pointermove', function (event) {
+            var gesture = dragging;
+            if (!gesture || gesture.id !== event.pointerId || gesture.released) return;
+            var distance = direction * (gesture.x - event.clientX);
+            if (!gesture.moved && Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) < 8) return;
+            gesture.progress = Math.max(0, Math.min(1, distance / main.clientWidth));
+            gesture.lift = Math.max(12, Math.min(main.clientHeight * 0.65,
+                Math.min(main.clientWidth / columns, main.clientHeight) * 0.32 + gesture.y - event.clientY));
+            if (!gesture.moved) {
+                gesture.moved = true;
+                suppressClick = true;
+                root.classList.add('book-dragging');
+                if (gesture.interactive) turnTo(spread + direction, gesture);
+            }
+            if (gesture.paint) gesture.paint(gesture.progress, gesture.lift);
+            // At a document boundary the destination does not exist yet. Lift the
+            // corner, then let the browser's navigation transition turn the page.
+            if (!gesture.interactive && !reducedMotion()) button.style.setProperty('--book-curl', 30 + gesture.progress * 90 + 'px');
+        });
+        button.addEventListener('pointerup', function (event) {
+            var gesture = dragging;
+            if (!gesture || gesture.id !== event.pointerId || gesture.released) return;
+            gesture.released = true;
+            gesture.commit = gesture.progress >= 0.35;
+            gesture.finish();
+        });
+        button.addEventListener('pointercancel', function () { if (dragging) dragging.cancel(); });
+        button.addEventListener('lostpointercapture', function () {
+            if (dragging && !dragging.released) dragging.cancel();
+        });
     }
 
     /* ---------- Index card ---------- */
@@ -508,12 +637,8 @@
         parts.prev.type = parts.next.type = 'button';
         parts.prev.append(element('span', '', label('previous', 'Previous')));
         parts.next.append(element('span', '', label('next', 'Next')));
-        parts.prev.addEventListener('click', function () {
-            turnTo(spread - 1);
-        });
-        parts.next.addEventListener('click', function () {
-            turnTo(spread + 1);
-        });
+        bindCorner(parts.prev, -1);
+        bindCorner(parts.next, 1);
 
         sentinel = element('span', 'book-end-of-text');
         sentinel.setAttribute('aria-hidden', 'true');
@@ -523,6 +648,7 @@
 
     function listen() {
         document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && dragging) { dragging.cancel(); return; }
             if (event.key === 'Escape' && document.body.classList.contains('book-index-open')) {
                 setIndex(false, true);
                 return;
@@ -586,6 +712,10 @@
         main.addEventListener('load', relayout, true);
         window.addEventListener('load', relayout);
         window.addEventListener('resize', relayout);
+        window.addEventListener('blur', function () { if (dragging) dragging.cancel(); });
+        document.addEventListener('visibilitychange', function () {
+            if (document.hidden && dragging) dragging.cancel();
+        });
         if (document.fonts) document.fonts.ready.then(relayout);
     }
 
