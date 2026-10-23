@@ -363,8 +363,9 @@
         main.scrollLeft = spread * main.clientWidth;
         var current = document.querySelector('.page-counter-current-page');
         var total = document.querySelector('.page-counter-total');
-        var section = current ? parseInt(current.textContent, 10) : 0;
-        var sections = total ? parseInt(total.textContent, 10) : 0;
+        // eXe only prints its page counter with "Add pagination"; the menu always knows the section.
+        var section = current ? parseInt(current.textContent, 10) : pageIndex(location.href) + 1;
+        var sections = total ? parseInt(total.textContent, 10) : document.querySelectorAll('#siteNav a[href]').length;
         var first = spread * columns + 1;
         var prefix = section ? section + '·' : '';
         var last = spread === spreads - 1;
