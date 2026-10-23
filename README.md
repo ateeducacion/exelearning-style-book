@@ -30,6 +30,10 @@ fuera del estilo, y no aparece en los recursos que se exporten con él.
   la esquina y, al soltar, comienza la transición de navegación.
   En la última página de una sección se pasa a la siguiente; hacia atrás se abre
   la sección anterior por su última página.
+- **Borde exterior de cada página**: como en turn.js, la hoja se puede coger a
+  cualquier altura del borde, no solo por la esquina, y se dobla desde ese punto.
+  Tirando en horizontal el pliegue es vertical; tirando hacia arriba o hacia abajo
+  se inclina. La franja ocupa solo el margen, así que no tapa el contenido.
 - **← y →** (también Re Pág y Av Pág) pasan página fuera de los controles de las
   actividades. En el móvil también se puede deslizar el dedo.
 - **Cinta de marcapáginas**: abre el índice, con el buscador y la licencia.
