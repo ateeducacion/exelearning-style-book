@@ -79,6 +79,15 @@ const base = process.argv[2] || 'http://localhost:1314/';
     await page.locator('#siteNav a').nth(2).click();
     await page.waitForURL(urls[2]); await ready();
 
+    // Without eXe's page counter ("Add pagination" off) the folios still carry the section.
+    await page.goto(urls[2]); await ready();
+    const folio = () => page.locator('.book-folio-left').innerText();
+    const withCounter = await folio();
+    await page.evaluate(() => document.querySelector('.page-counter').remove());
+    await page.waitForFunction(() => !document.querySelector('.page-counter'));
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    assert.equal(await folio(), withCounter, 'Folios keep the section number without the page counter');
+
     // Activities work inside the pages.
     await page.goto(urls.find(url => url.includes('verdadero'))); await ready();
     assert.equal(await page.getByRole('radio', { name: 'Verdadero', exact: true }).count(), 4, 'True labels are in Spanish');
