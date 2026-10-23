@@ -33,6 +33,7 @@
     var running = null;
     var scheduled = false;
     var dragging = null;
+    var deferred = false;
 
     /* ---------- Small helpers ---------- */
 
@@ -287,6 +288,10 @@
         if (gesture) {
             gesture.paint = paint;
             gesture.settle = settle;
+            // Paused animations would latch onto the next transition's pseudo-elements and hold it open.
+            gesture.stop = function () {
+                Object.keys(animations).forEach(function (key) { animations[key].cancel(); });
+            };
             paint(gesture.progress, gesture.lift);
             if (gesture.released) gesture.finish();
         } else settle(0, 1, plan.lift);
@@ -381,8 +386,12 @@
 
     function layout() {
         scheduled = false;
-        if (dragging) dragging.cancel();
         if (!main) return;
+        // Activities restyle themselves at any time; measure once the held page is let go.
+        if (dragging) {
+            deferred = true;
+            return;
+        }
         measure();
         show();
     }
@@ -479,6 +488,10 @@
                 root.classList.remove('book-dragging');
                 button.style.removeProperty('--book-curl');
                 if (button.hasPointerCapture(gesture.id)) button.releasePointerCapture(gesture.id);
+                if (deferred) {
+                    deferred = false;
+                    relayout();
+                }
             };
             gesture.cancel = function () {
                 gesture.released = true;
@@ -490,6 +503,7 @@
                     show();
                     if (running) skip(running);
                 }
+                if (gesture.stop) gesture.stop();
                 cleanup();
             };
             gesture.finish = function () {
@@ -712,7 +726,11 @@
         }).observe(main, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'hidden', 'open'] });
         main.addEventListener('load', relayout, true);
         window.addEventListener('load', relayout);
-        window.addEventListener('resize', relayout);
+        window.addEventListener('resize', function () {
+            // A new page size invalidates the fold being held.
+            if (dragging) dragging.cancel();
+            relayout();
+        });
         window.addEventListener('blur', function () { if (dragging) dragging.cancel(); });
         document.addEventListener('visibilitychange', function () {
             if (document.hidden && dragging) dragging.cancel();

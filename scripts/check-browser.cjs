@@ -130,6 +130,10 @@ const base = process.argv[2] || 'http://localhost:1314/';
       await page.mouse.move(x + sign * width * fraction, y - 35, { steps: 6 });
       if (cancel === 'escape') await page.keyboard.press('Escape');
       if (cancel === 'pointer') await page.locator('.book-corner-' + side).dispatchEvent('pointercancel');
+      if (cancel === 'mutate') {
+        await page.evaluate(() => { document.querySelector('.idevice_node').style.outlineColor = 'red'; });
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      }
       await page.mouse.up();
       await page.waitForFunction(() => !document.documentElement.matches(':active-view-transition') && !document.documentElement.classList.contains('book-dragging'));
     };
@@ -144,6 +148,9 @@ const base = process.argv[2] || 'http://localhost:1314/';
     assert.equal((await book()).spread, sourceSpread, 'Escape cancels a held corner');
     await drag('next', 0.48, 'pointer');
     assert.equal((await book()).spread, sourceSpread, 'Pointer cancellation restores the original spread');
+    await drag('next', 0.48, 'mutate');
+    assert.equal((await book()).spread, sourceSpread + 1, 'A content change during a drag does not cancel it');
+    await drag('prev', 0.48);
     assert(await page.evaluate(() => window.bookActivityNodes.every((node, i) => node === document.querySelectorAll('.idevice_node')[i])), 'Activity nodes keep their identity');
     assert(await page.getByRole('radio', { name: 'Falso', exact: true }).first().isChecked(), 'Activity answers survive completed and cancelled turns');
     await page.emulateMedia({ reducedMotion: 'reduce' });
