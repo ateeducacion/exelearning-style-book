@@ -4,7 +4,7 @@ const { chromium } = require('playwright');
 const base = process.argv[2] || 'http://localhost:1314/';
 
 (async () => {
-  const browser = await chromium.launch({ channel: 'chrome' });
+  const browser = await chromium.launch(process.env.BOOK_CHROME ? { executablePath: process.env.BOOK_CHROME } : { channel: 'chrome' });
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -95,6 +95,53 @@ const base = process.argv[2] || 'http://localhost:1314/';
     await page.getByRole('button', { name: 'Comprobar', exact: true }).click();
     assert.deepEqual(await page.locator('.TOFP-SolutionMessage').allTextContents(), Array(4).fill('Incorrecto'), 'Wrong and unanswered questions get Spanish feedback');
     assert.equal(await page.locator('.TOFP-Message').innerText(), 'Tu puntuación: 0.00');
+
+    // Keep the real activity nodes while adding enough text to exercise turns
+    // independently of font/platform differences in the example's pagination.
+    await page.evaluate(() => {
+      window.bookActivityNodes = [...document.querySelectorAll('.idevice_node')];
+      const fixture = document.createElement('section');
+      for (let i = 0; i < 48; i++) {
+        const paragraph = document.createElement('p');
+        paragraph.textContent = 'Page-turn regression fixture. '.repeat(18);
+        fixture.append(paragraph);
+      }
+      document.querySelector('.book-end-of-text').before(fixture);
+    });
+    await page.waitForFunction(() => document.querySelector('main.page').scrollWidth > 3 * document.querySelector('main.page').clientWidth);
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const drag = async (side, fraction, cancel) => {
+      const bounds = await page.locator('.book-corner-' + side).boundingBox();
+      const width = await page.locator('main.page').evaluate(node => node.clientWidth);
+      const x = bounds.x + bounds.width / 2;
+      const y = bounds.y + bounds.height / 2;
+      const sign = side === 'next' ? -1 : 1;
+      await page.mouse.move(x, y);
+      await page.mouse.down();
+      await page.mouse.move(x + sign * width * fraction, y - 35, { steps: 6 });
+      if (cancel === 'escape') await page.keyboard.press('Escape');
+      if (cancel === 'pointer') await page.locator('.book-corner-' + side).dispatchEvent('pointercancel');
+      await page.mouse.up();
+      await page.waitForFunction(() => !document.documentElement.matches(':active-view-transition') && !document.documentElement.classList.contains('book-dragging'));
+    };
+    const sourceSpread = (await book()).spread;
+    await drag('next', 0.16);
+    assert.equal((await book()).spread, sourceSpread, 'A short drag returns to the original spread');
+    await drag('next', 0.48);
+    assert.equal((await book()).spread, sourceSpread + 1, 'A completed drag advances once');
+    await drag('prev', 0.48);
+    assert.equal((await book()).spread, sourceSpread, 'The left corner drags backward');
+    await drag('next', 0.48, 'escape');
+    assert.equal((await book()).spread, sourceSpread, 'Escape cancels a held corner');
+    await drag('next', 0.48, 'pointer');
+    assert.equal((await book()).spread, sourceSpread, 'Pointer cancellation restores the original spread');
+    assert(await page.evaluate(() => window.bookActivityNodes.every((node, i) => node === document.querySelectorAll('.idevice_node')[i])), 'Activity nodes keep their identity');
+    assert(await page.getByRole('radio', { name: 'Falso', exact: true }).first().isChecked(), 'Activity answers survive completed and cancelled turns');
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await drag('next', 0.48);
+    assert.equal((await book()).spread, sourceSpread + 1, 'Reduced motion preserves drag navigation');
+    assert.equal(await page.evaluate(() => document.documentElement.matches(':active-view-transition')), false, 'Reduced motion does not create a transition');
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
 
     await page.goto(urls.find(url => url.includes('ordena'))); await ready();
     const options = await page.locator('.scrambled-list').evaluate(node => JSON.parse(node.dataset.ideviceJsonData).options);

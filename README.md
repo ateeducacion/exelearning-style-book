@@ -24,6 +24,10 @@ fuera del estilo, y no aparece en los recursos que se exporten con él.
 
 - **Esquinas inferiores**: pasan página. Al pasar el ratón se levantan; al pulsar,
   la hoja se dobla desde la esquina, cruza el lomo y se posa al otro lado.
+  También se pueden arrastrar: al soltar después de recorrer el 35 % del ancho
+  se completa el giro; antes, vuelve a su posición. Escape cancela el arrastre.
+  Dentro de una sección el pliegue sigue el puntero; entre documentos se levanta
+  la esquina y, al soltar, comienza la transición de navegación.
   En la última página de una sección se pasa a la siguiente; hacia atrás se abre
   la sección anterior por su última página.
 - **← y →** (también Re Pág y Av Pág) pasan página fuera de los controles de las
@@ -59,7 +63,10 @@ NODE_PATH=/ruta/a/exelearning/node_modules node scripts/check-browser.cjs
 ```
 
 Recorren el libro entero con las esquinas, la vuelta a la última página de la
-sección anterior, el teclado, el índice, las actividades y los anchos de móvil.
+sección anterior, el teclado, el índice, las actividades, los anchos de móvil y
+el arrastre de las esquinas (avance, retorno y cancelación). `BOOK_CHROME` permite
+indicar la ruta de Chrome si no está instalado en su ubicación habitual.
+`node scripts/check-turn.cjs` comprueba la geometría y el ciclo de los gestos sin navegador.
 Para regenerar la miniatura, añade `BOOK_SCREENSHOT=theme/screenshot.png` al comando.
 
 ## Mantenimiento y publicación
@@ -115,3 +122,10 @@ ImageGen en acuarela y tinta; los prompts están en
 [scripts/illustration-prompts.json](scripts/illustration-prompts.json).
 Los archivos de eXeLearning y sus bibliotecas conservan sus licencias
 originales.
+
+El movimiento de la hoja toma [Turn.js](https://github.com/bahadirdogru/Turn.js-5)
+como referencia visual. La geometría, las sombras y los gestos de este estilo son
+una implementación independiente: no incluyen código ni dependencias de Turn.js.
+Las sombras se orientan con el pliegue y el reverso se aplana reduciendo su anchura,
+sin una desaparición por opacidad. Se conservan las columnas CSS y las capturas
+`book-page` / `book-sheet-back`; no se clonan ni se reescriben iDevices.
