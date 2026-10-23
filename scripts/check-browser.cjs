@@ -88,6 +88,21 @@ const base = process.argv[2] || 'http://localhost:1314/';
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     assert.equal(await folio(), withCounter, 'Folios keep the section number without the page counter');
 
+    // An image with its own width keeps it, as in other styles (height follows the aspect ratio).
+    const sized = await page.evaluate(() => {
+      const image = document.querySelector('main.page img[src*="content/resources"]');
+      const copy = image.cloneNode();
+      copy.setAttribute('width', '200');
+      copy.setAttribute('height', '176');
+      copy.style.cssText = 'float: right; margin-left: 50px;';
+      image.before(copy);
+      const box = copy.getBoundingClientRect();
+      const float = getComputedStyle(copy).float;
+      copy.remove();
+      return { width: Math.round(box.width), float };
+    });
+    assert.deepEqual(sized, { width: 200, float: 'right' }, 'Images keep their width attribute and float');
+
     // Activities work inside the pages.
     await page.goto(urls.find(url => url.includes('verdadero'))); await ready();
     assert.equal(await page.getByRole('radio', { name: 'Verdadero', exact: true }).count(), 4, 'True labels are in Spanish');
