@@ -49,6 +49,16 @@ const base = process.argv[2] || 'http://localhost:1314/';
     assert.equal(visited.size, urls.length, 'The corner reaches every section');
     assert.equal(stripped(page.url()), stripped(urls.at(-1)), 'Reading ends on the last section');
 
+    // Between sections the outgoing page keeps showing its last frame until the next
+    // one is ready, so the back of the sheet must not be on it (it covers the spread).
+    await page.goto(urls[1]); await ready();
+    await page.evaluate(() => addEventListener('pageswap', () => {
+      sessionStorage.setItem('check-sheet-back', String(document.querySelectorAll('.book-sheet-back').length));
+    }));
+    while (stripped(page.url()) === stripped(urls[1])) await turn('next');
+    assert.equal(await page.evaluate(() => sessionStorage.getItem('check-sheet-back')), '0', 'The outgoing page is not covered by the back of the sheet');
+    assert.equal(await page.locator('.book-sheet-back').count(), 0, 'The incoming page drops the back of the sheet after the turn');
+
     // Going back to the previous section opens it at its last page.
     await page.goto(urls[1]); await ready();
     const sectionSpreads = await page.evaluate(() => {

@@ -261,7 +261,7 @@
         var pseudos = {
             sheet: '::view-transition-' + plan.sheet + '(book-page)',
             under: '::view-transition-' + plan.under + '(book-page)',
-            flap: '::view-transition-old(book-sheet-back)',
+            flap: '::view-transition-' + (plan.back || 'old') + '(book-sheet-back)',
             shadow: '::view-transition-group(book-sheet-back)',
         };
         var animations = {};
@@ -323,20 +323,27 @@
             return;
         }
         store(TURN_KEY, { forward: to > from, columns: columns, width: main.clientWidth, height: main.clientHeight });
-        book.append(sheetBack());
     });
 
     window.addEventListener('pagereveal', function (event) {
-        // A page restored from the back/forward cache still holds the back of the sheet.
+        // A page left mid-turn may come back from the back/forward cache with its sheet.
         var backs = document.querySelectorAll('.book-sheet-back');
         for (var i = 0; i < backs.length; i++) backs[i].remove();
         if (!event.viewTransition) return;
         var turn = take(TURN_KEY);
-        if (!turn || !turn.width) {
+        // This page may reveal before init(), so find the book here.
+        var target = document.querySelector('.exe-web-site .exe-content');
+        if (!turn || !turn.width || !target) {
             skip(event.viewTransition);
             return;
         }
         var plan = turnPlan(turn.forward, turn.columns, turn.width, turn.height);
+        // The outgoing page stays on screen until this one is ready, so the back of the
+        // sheet is captured here, where the transition hides the live page.
+        plan.back = 'new';
+        var back = sheetBack();
+        target.append(back);
+        event.viewTransition.finished.catch(noop).then(function () { back.remove(); });
         event.viewTransition.types.add(plan.sheet === 'old' ? 'book-turn-old' : 'book-turn-new');
         event.viewTransition.ready
             .then(function () {

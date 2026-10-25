@@ -1349,12 +1349,14 @@ html.book-paged #made-with-eXe {
 
 ::view-transition-old(book-page),
 ::view-transition-new(book-page),
-::view-transition-old(book-sheet-back) {
+::view-transition-old(book-sheet-back),
+::view-transition-new(book-sheet-back) {
     animation: none;
     mix-blend-mode: normal;
 }
 
-::view-transition-old(book-sheet-back) {
+::view-transition-old(book-sheet-back),
+::view-transition-new(book-sheet-back) {
     transform-origin: 0 0;
     opacity: 1;
 }
