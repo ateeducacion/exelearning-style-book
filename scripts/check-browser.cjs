@@ -49,6 +49,16 @@ const base = process.argv[2] || 'http://localhost:1314/';
     assert.equal(visited.size, urls.length, 'The corner reaches every section');
     assert.equal(stripped(page.url()), stripped(urls.at(-1)), 'Reading ends on the last section');
 
+    // Between sections the outgoing page keeps showing its last frame until the next
+    // one is ready, so the back of the sheet must not be on it (it covers the spread).
+    await page.goto(urls[1]); await ready();
+    await page.evaluate(() => addEventListener('pageswap', () => {
+      sessionStorage.setItem('check-sheet-back', String(document.querySelectorAll('.book-sheet-back').length));
+    }));
+    while (stripped(page.url()) === stripped(urls[1])) await turn('next');
+    assert.equal(await page.evaluate(() => sessionStorage.getItem('check-sheet-back')), '0', 'The outgoing page is not covered by the back of the sheet');
+    assert.equal(await page.locator('.book-sheet-back').count(), 0, 'The incoming page drops the back of the sheet after the turn');
+
     // Going back to the previous section opens it at its last page.
     await page.goto(urls[1]); await ready();
     const sectionSpreads = await page.evaluate(() => {
@@ -152,6 +162,27 @@ const base = process.argv[2] || 'http://localhost:1314/';
       await page.mouse.up();
       await page.waitForFunction(() => !document.documentElement.matches(':active-view-transition') && !document.documentElement.classList.contains('book-dragging'));
     };
+    // The whole outer edge of each page can be pulled, not only the corners.
+    const edges = await page.evaluate(() => {
+      const main = document.querySelector('main.page').getBoundingClientRect();
+      return ['prev', 'next'].map(side => {
+        const strip = document.querySelector('.book-edge-' + side);
+        if (!strip) return null;
+        const box = strip.getBoundingClientRect();
+        return { top: Math.round(box.top - main.top), bottom: Math.round(main.bottom - box.bottom), outer: Math.round(side === 'next' ? main.right - box.right : box.left - main.left) };
+      });
+    });
+    assert.deepEqual(edges, [{ top: 0, bottom: 0, outer: 0 }, { top: 0, bottom: 0, outer: 0 }], 'Both outer edges can be pulled along their full height');
+    const edgeSpread = (await book()).spread;
+    const strip = await page.locator('.book-edge-next').boundingBox();
+    const edgeWidth = await page.locator('main.page').evaluate(node => node.clientWidth);
+    await page.mouse.move(strip.x + strip.width / 2, strip.y + strip.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(strip.x + strip.width / 2 - edgeWidth * 0.48, strip.y + strip.height / 2, { steps: 6 });
+    await page.mouse.up();
+    await page.waitForFunction(() => !document.documentElement.matches(':active-view-transition') && !document.documentElement.classList.contains('book-dragging'));
+    assert.equal((await book()).spread, edgeSpread + 1, 'Pulling the middle of the edge turns the page');
+    await drag('prev', 0.48);
     const sourceSpread = (await book()).spread;
     await drag('next', 0.16);
     assert.equal((await book()).spread, sourceSpread, 'A short drag returns to the original spread');
