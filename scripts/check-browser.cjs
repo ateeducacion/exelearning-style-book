@@ -144,7 +144,8 @@ const base = process.argv[2] || 'http://localhost:1314/';
     });
     await page.waitForFunction(() => document.querySelector('main.page').scrollWidth > 3 * document.querySelector('main.page').clientWidth);
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-    const drag = async (side, fraction, cancel) => {
+    // Holding still before letting go decides by distance; letting go while moving is a flick.
+    const drag = async (side, fraction, cancel, flick) => {
       const bounds = await page.locator('.book-corner-' + side).boundingBox();
       const width = await page.locator('main.page').evaluate(node => node.clientWidth);
       const x = bounds.x + bounds.width / 2;
@@ -159,6 +160,7 @@ const base = process.argv[2] || 'http://localhost:1314/';
         await page.evaluate(() => { document.querySelector('.idevice_node').style.outlineColor = 'red'; });
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       }
+      if (!flick) await page.waitForTimeout(150);
       await page.mouse.up();
       await page.waitForFunction(() => !document.documentElement.matches(':active-view-transition') && !document.documentElement.classList.contains('book-dragging'));
     };
@@ -179,6 +181,7 @@ const base = process.argv[2] || 'http://localhost:1314/';
     await page.mouse.move(strip.x + strip.width / 2, strip.y + strip.height / 2);
     await page.mouse.down();
     await page.mouse.move(strip.x + strip.width / 2 - edgeWidth * 0.48, strip.y + strip.height / 2, { steps: 6 });
+    await page.waitForTimeout(150);
     await page.mouse.up();
     await page.waitForFunction(() => !document.documentElement.matches(':active-view-transition') && !document.documentElement.classList.contains('book-dragging'));
     assert.equal((await book()).spread, edgeSpread + 1, 'Pulling the middle of the edge turns the page');
@@ -186,6 +189,9 @@ const base = process.argv[2] || 'http://localhost:1314/';
     const sourceSpread = (await book()).spread;
     await drag('next', 0.16);
     assert.equal((await book()).spread, sourceSpread, 'A short drag returns to the original spread');
+    await drag('next', 0.16, null, true);
+    assert.equal((await book()).spread, sourceSpread + 1, 'A short flick turns the page');
+    await drag('prev', 0.48);
     await drag('next', 0.48);
     assert.equal((await book()).spread, sourceSpread + 1, 'A completed drag advances once');
     await drag('prev', 0.48);
@@ -197,6 +203,19 @@ const base = process.argv[2] || 'http://localhost:1314/';
     await drag('next', 0.48, 'mutate');
     assert.equal((await book()).spread, sourceSpread + 1, 'A content change during a drag does not cancel it');
     await drag('prev', 0.48);
+    // A two-finger trackpad swipe, momentum included, turns exactly once.
+    const swipe = async sign => {
+      await page.mouse.move(640, 400);
+      for (const delta of [10, 20, 30, 40, 40, 30, 25, 20, 15, 10, 8, 6, 4, 3, 2, 1]) {
+        await page.mouse.wheel(sign * delta, 1);
+        await page.waitForTimeout(16);
+      }
+      await page.waitForFunction(() => !document.documentElement.matches(':active-view-transition') && !document.documentElement.classList.contains('book-dragging'));
+    };
+    await swipe(1);
+    assert.equal((await book()).spread, sourceSpread + 1, 'A trackpad swipe turns the page');
+    await swipe(-1);
+    assert.equal((await book()).spread, sourceSpread, 'A trackpad swipe turns back');
     assert(await page.evaluate(() => window.bookActivityNodes.every((node, i) => node === document.querySelectorAll('.idevice_node')[i])), 'Activity nodes keep their identity');
     assert(await page.getByRole('radio', { name: 'Falso', exact: true }).first().isChecked(), 'Activity answers survive completed and cancelled turns');
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -204,6 +223,20 @@ const base = process.argv[2] || 'http://localhost:1314/';
     assert.equal((await book()).spread, sourceSpread + 1, 'Reduced motion preserves drag navigation');
     assert.equal(await page.evaluate(() => document.documentElement.matches(':active-view-transition')), false, 'Reduced motion does not create a transition');
     await page.emulateMedia({ reducedMotion: 'no-preference' });
+
+    // Towards another section the held sheet already folds, over blank paper.
+    await page.goto(urls[0]); await ready();
+    const cover = await page.locator('.book-corner-next').boundingBox();
+    const coverWidth = await page.locator('main.page').evaluate(node => node.clientWidth);
+    await page.mouse.move(cover.x + cover.width / 2, cover.y + cover.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(cover.x + cover.width / 2 - coverWidth * 0.48, cover.y, { steps: 6 });
+    assert.deepEqual(await page.evaluate(() => [document.documentElement.matches(':active-view-transition'), document.querySelector('.exe-content').classList.contains('book-blank')]), [true, true], 'A sheet held at a section boundary folds');
+    await page.waitForTimeout(150);
+    await page.mouse.up();
+    await page.waitForURL(urls[1]); await ready();
+    await page.waitForFunction(() => !document.documentElement.matches(':active-view-transition'));
+    assert.equal(await page.evaluate(() => document.querySelector('.book-blank, .book-sheet-back')), null, 'The next section finishes the turn and leaves no blank paper');
 
     await page.goto(urls.find(url => url.includes('ordena'))); await ready();
     const options = await page.locator('.scrambled-list').evaluate(node => JSON.parse(node.dataset.ideviceJsonData).options);

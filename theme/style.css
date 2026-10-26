@@ -1373,6 +1373,11 @@ html:active-view-transition-type(book-turn-new)::view-transition-new(book-page) 
     pointer-events: none;
 }
 
+/* Turning towards another section: blank paper waits under the sheet */
+.book-blank main.page > * {
+    visibility: hidden;
+}
+
 /* Back of the sheet (added by style.js only while the page turns) */
 .book-sheet-back {
     position: absolute;

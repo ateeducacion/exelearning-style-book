@@ -9,13 +9,16 @@ const context = {
   document: { documentElement: root, querySelector: () => null, readyState: 'loading', addEventListener() {} },
   window: { addEventListener() {}, matchMedia: () => ({ matches: false }) },
   CSS: { supports: () => true },
+  performance,
 };
 vm.createContext(context);
 const source = fs.readFileSync(require.resolve('../theme/style.js'), 'utf8');
 vm.runInContext(source.replace(source.slice(source.lastIndexOf('})();')), `
-  globalThis.test = { turnPlan: turnPlan, foldAt: foldAt, bindCorner: bindCorner,
+  globalThis.test = { turnPlan: turnPlan, foldAt: foldAt, pointAt: pointAt, bindCorner: bindCorner,
     setup: function (reduced) {
       spread = 1; spreads = 4; columns = 2; running = null; dragging = null;
+      book = { classList: { add: function () {}, remove: function () {} } };
+      neighbour = function () { return null; };
       main = { clientWidth: 1000, clientHeight: 700, getBoundingClientRect: function () { return { top: globalThis.mainTop || 0 }; } };
       show = function () {};
       reducedMotion = function () { return reduced; };
@@ -113,16 +116,21 @@ api.bindCorner(strip, 1, stripCorner);
 api.setMainTop(40);
 strip.fire('pointerdown', { clientX: 1000, clientY: 340 });
 strip.fire('pointermove', { clientX: 700, clientY: 340 });
-assert.equal(api.dragging().grab, 300, 'The fold starts where the edge is held');
-assert.equal(api.dragging().lift, 0, 'A level pull keeps the crease vertical');
+assert.equal(api.dragging().plan.grab, 300, 'The fold starts where the edge is held');
+assert.deepEqual({ ...api.dragging().point }, { x: 700, y: 300 }, 'The held point stays under the pointer');
 strip.fire('pointermove', { clientX: 700, clientY: 440 });
-assert.equal(api.dragging().lift, -100, 'Pulling down lowers the held point');
+assert.equal(api.dragging().point.y, 400, 'Pulling down lowers the held point');
 strip.fire('pointermove', { clientX: 700, clientY: 2000 });
-assert.equal(api.dragging().lift, -400, 'The held point never leaves the page');
+assert(api.dragging().point.y <= 700, 'The held point never leaves the page');
 strip.fire('pointermove', { clientX: 500, clientY: 340 });
 strip.fire('pointerup');
 assert.equal(context.turns.at(-1).target, 2, 'A long pull from the edge turns the page');
 assert.equal(api.dragging(), null);
+strip.fire('pointerdown', { clientX: 1000, clientY: 340 });
+strip.fire('pointermove', { clientX: -2000, clientY: 340 });
+const held = api.dragging().point;
+assert(Math.hypot(held.x - 500, held.y) <= Math.hypot(500, 300) + 2, 'The sheet stays bound at the spine');
+strip.fire('pointercancel');
 
 // Release before the asynchronous View Transition snapshots are ready.
 context.document.startViewTransition = function () {};
@@ -137,7 +145,7 @@ assert.equal(gesture.released, true);
 assert.equal(gesture.commit, true);
 assert.equal(context.turns.length, 1);
 let settled = false;
-gesture.settle = (from, to, lift, done) => { assert.equal(to, 1); settled = true; done(); };
+gesture.settle = (from, to, lift, done) => { assert.deepEqual({ ...to }, { ...api.pointAt(gesture.plan, 1, 0) }); settled = true; done(); };
 gesture.finish();
 assert(settled, 'An early release settles once snapshots become ready');
 assert.equal(api.dragging(), null);

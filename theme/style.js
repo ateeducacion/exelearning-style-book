@@ -34,6 +34,7 @@
     var scheduled = false;
     var dragging = null;
     var deferred = false;
+    var handoff = null;
 
     /* ---------- Small helpers ---------- */
 
@@ -161,24 +162,59 @@
     }
 
     /*
-     * Independent paper geometry: the perpendicular bisector of the resting and
-     * lifted corner is the fold. A narrow, opaque band describes the curved back;
+     * Independent paper geometry: the reader holds the outer edge of the curl and
+     * the crease runs perpendicular to the pull, one curl behind. A narrow, opaque band describes the curved back;
      * the part already laid down reveals the destination snapshot. The band gets
      * narrower as the paper flattens, rather than fading a whole blank sheet out.
      * No activity DOM is copied: both faces remain browser-owned snapshots.
      */
     function foldAt(plan, progress, lift) {
+        return foldTo(plan, pointAt(plan, progress, lift));
+    }
+
+    // Where the held point of the sheet rests before it turns.
+    function cornerOf(plan) {
+        return { x: plan.spine + plan.dir * plan.width, y: plan.grab };
+    }
+
+    // The held point at a given progress, raised along an arc of height lift.
+    function pointAt(plan, progress, lift) {
         var t = plan.reverse ? 1 - progress : progress;
+        var corner = cornerOf(plan);
+        return { x: corner.x - plan.dir * 2 * plan.width * t, y: plan.grab - lift * Math.sin(Math.PI * t) };
+    }
+
+    function progressOf(plan, to) {
+        var t = Math.max(0, Math.min(1, plan.dir * (cornerOf(plan).x - to.x) / (2 * plan.width)));
+        return plan.reverse ? 1 - t : t;
+    }
+
+    // The sheet is bound at the spine: the held point stays as far from the spine's ends as it rests.
+    // ponytail: one pass per end, so a far pull can overshoot one circle by a pixel or two.
+    function bound(plan, to) {
+        var corner = cornerOf(plan);
+        [0, plan.height].forEach(function (y) {
+            var reach = Math.hypot(plan.width, corner.y - y);
+            var dx = to.x - plan.spine;
+            var dy = to.y - y;
+            var distance = Math.hypot(dx, dy);
+            if (distance > reach) to = { x: plan.spine + dx * reach / distance, y: y + dy * reach / distance };
+        });
+        return to;
+    }
+
+    // hand: the outer edge of the curl, the paper the reader holds.
+    function foldTo(plan, hand) {
         var width = plan.width;
         var height = plan.height;
         var dir = plan.dir;
         var x0 = plan.spine;
         var sheet = dir > 0 ? rect(x0, x0 + width, height) : rect(x0 - width, x0, height);
         var other = plan.columns > 1 ? (dir > 0 ? rect(0, x0, height) : rect(x0, 2 * width, height)) : [];
-        var corner = { x: x0 + dir * width, y: plan.grab };
-        var to = { x: corner.x - dir * 2 * width * t, y: plan.grab - lift * Math.sin(Math.PI * t) };
-        var dx = to.x - corner.x;
-        var dy = to.y - corner.y;
+        var corner = cornerOf(plan);
+        var t = Math.max(0, Math.min(1, dir * (corner.x - hand.x) / (2 * width)));
+        var dx = hand.x - corner.x;
+        var dy = hand.y - corner.y;
         var length = Math.hypot(dx, dy);
         var empty = 'polygon(0px 0px, 0px 0px, 0px 0px)';
         if (length < 0.01 || t >= 1) {
@@ -191,18 +227,18 @@
         }
         var n = { x: dx / length, y: dy / length };
         var tangent = { x: -n.y, y: n.x };
-        var middle = { x: (corner.x + to.x) / 2, y: (corner.y + to.y) / 2 };
+        // A sheet pulled level still bends as much as a lifted corner.
+        var bend = Math.max(Math.abs(plan.grab - hand.y), plan.bend);
+        var curl = Math.max(0.01, Math.min(width * 0.24, bend * 0.65, length / 2) * Math.sin(Math.PI * t));
+        // The crease sits one curl behind the hand.
+        var middle = { x: hand.x - n.x * curl, y: hand.y - n.y * curl };
         var keep = clip(sheet, middle, n);
         var folded = clip(sheet, middle, { x: -n.x, y: -n.y });
         var reflected = folded.map(function (p) {
             var d = 2 * ((p.x - middle.x) * n.x + (p.y - middle.y) * n.y);
             return { x: p.x - d * n.x, y: p.y - d * n.y };
         });
-        // A sheet pulled level from its edge still bends as much as a lifted corner.
-        var bend = plan.edge ? Math.max(Math.abs(lift), plan.bend) : lift;
-        var curl = Math.max(0.01, Math.min(width * 0.24, bend * 0.65) * Math.sin(Math.PI * t));
-        var edge = { x: middle.x + n.x * curl, y: middle.y + n.y * curl };
-        var band = clip(reflected, edge, { x: -n.x, y: -n.y });
+        var band = clip(reflected, hand, { x: -n.x, y: -n.y });
         var reach = Math.hypot(plan.totalWidth, height);
         var origin = { x: middle.x - tangent.x * reach, y: middle.y - tangent.y * reach };
         // Put a fixed paper gradient in fold coordinates. Its light and dark edges
@@ -214,8 +250,8 @@
         });
         var matrix = [n.x * curl / plan.totalWidth, n.y * curl / plan.totalWidth,
             tangent.x * 2 * reach / height, tangent.y * 2 * reach / height, origin.x, origin.y];
-        var resting = clip(other, to, { x: -dir, y: 0 });
-        var landed = clip(other, to, { x: dir, y: 0 });
+        var resting = clip(other, hand, { x: -dir, y: 0 });
+        var landed = clip(other, hand, { x: dir, y: 0 });
         var strength = Math.sin(Math.PI * t);
         var blur = 1 + 12 * strength;
         return {
@@ -257,7 +293,8 @@
         return /ms$/.test(value) ? number : number * 1000;
     }
 
-    function animateTurn(plan, gesture) {
+    // from: where a held sheet was let go on the previous document.
+    function animateTurn(plan, gesture, from) {
         var pseudos = {
             sheet: '::view-transition-' + plan.sheet + '(book-page)',
             under: '::view-transition-' + plan.under + '(book-page)',
@@ -270,24 +307,29 @@
             animations[key].pause();
             animations[key].finished.catch(noop);
         });
-        var paint = function (progress, lift) {
-            var frame = foldAt(plan, progress, lift);
+        var paint = function (to) {
+            var frame = foldTo(plan, to);
             Object.keys(animations).forEach(function (key) {
                 animations[key].effect.setKeyframes([frame[key], frame[key]]);
                 animations[key].currentTime = 0;
             });
         };
+        // The held point travels straight to its end, raised along an arc of height lift.
         var settle = function (from, to, lift, done) {
             var frames = { sheet: [], under: [], flap: [], shadow: [] };
             for (var i = 0; i <= FRAMES; i++) {
                 var ratio = i / FRAMES;
-                var frame = foldAt(plan, from + (to - from) * ratio, lift + (plan.lift - lift) * ratio);
+                var frame = foldTo(plan, {
+                    x: from.x + (to.x - from.x) * ratio,
+                    y: from.y + (to.y - from.y) * ratio - lift * Math.sin(Math.PI * ratio),
+                });
                 Object.keys(frames).forEach(function (key) { frames[key].push(frame[key]); });
             }
+            var share = Math.abs(to.x - from.x) / (2 * plan.width);
             Object.keys(animations).forEach(function (key) {
                 var animation = animations[key];
                 animation.effect.setKeyframes(frames[key]);
-                animation.effect.updateTiming({ duration: Math.max(140, duration() * Math.abs(to - from)), easing: 'cubic-bezier(.3, 0, .2, 1)' });
+                animation.effect.updateTiming({ duration: Math.max(140, duration() * share), easing: 'cubic-bezier(.3, 0, .2, 1)' });
                 animation.currentTime = 0;
                 animation.play();
             });
@@ -300,9 +342,9 @@
             gesture.stop = function () {
                 Object.keys(animations).forEach(function (key) { animations[key].cancel(); });
             };
-            paint(gesture.progress, gesture.lift);
+            paint(gesture.point);
             if (gesture.released) gesture.finish();
-        } else settle(0, 1, plan.lift);
+        } else settle(from || pointAt(plan, 0, 0), pointAt(plan, 1, 0), from ? 0 : plan.lift);
     }
 
     function sheetBack() {
@@ -315,6 +357,10 @@
 
     // The outgoing page knows the table of contents, so it decides the direction.
     window.addEventListener('pageswap', function (event) {
+        // A sheet let go here was turning onto blank paper: the snapshot is this page as it is.
+        var held = handoff;
+        handoff = null;
+        clearHeld();
         if (!event.viewTransition || !event.activation || !main) return;
         var from = pageIndex(location.href);
         var to = pageIndex(event.activation.entry.url);
@@ -322,13 +368,23 @@
             skip(event.viewTransition);
             return;
         }
-        store(TURN_KEY, { forward: to > from, columns: columns, width: main.clientWidth, height: main.clientHeight });
+        store(TURN_KEY, {
+            forward: to > from, columns: columns, width: main.clientWidth, height: main.clientHeight,
+            grab: held ? held.plan.grab : null, from: held ? held.point : null,
+        });
     });
+
+    // Leftovers of a turn: the back of the sheet and the blank paper under it.
+    function clearHeld() {
+        var backs = document.querySelectorAll('.book-sheet-back');
+        for (var i = 0; i < backs.length; i++) backs[i].remove();
+        if (book) book.classList.remove('book-blank');
+    }
 
     window.addEventListener('pagereveal', function (event) {
         // A page left mid-turn may come back from the back/forward cache with its sheet.
-        var backs = document.querySelectorAll('.book-sheet-back');
-        for (var i = 0; i < backs.length; i++) backs[i].remove();
+        if (dragging) dragging.cancel();
+        clearHeld();
         if (!event.viewTransition) return;
         var turn = take(TURN_KEY);
         // This page may reveal before init(), so find the book here.
@@ -337,7 +393,7 @@
             skip(event.viewTransition);
             return;
         }
-        var plan = turnPlan(turn.forward, turn.columns, turn.width, turn.height);
+        var plan = turnPlan(turn.forward, turn.columns, turn.width, turn.height, turn.grab);
         // The outgoing page stays on screen until this one is ready, so the back of the
         // sheet is captured here, where the transition hides the live page.
         plan.back = 'new';
@@ -347,7 +403,7 @@
         event.viewTransition.types.add(plan.sheet === 'old' ? 'book-turn-old' : 'book-turn-new');
         event.viewTransition.ready
             .then(function () {
-                animateTurn(plan);
+                animateTurn(plan, null, turn.from);
             })
             .catch(function () {
                 /* Skipped: the page is already shown. */
@@ -429,14 +485,10 @@
     function turnTo(target, gesture) {
         if (dragging && dragging !== gesture) return;
         if (running) return;
-        if (target < 0) {
-            var previous = neighbour('left');
-            if (previous) leave(previous, true);
-            return;
-        }
-        if (target > spreads - 1) {
-            var next = neighbour('right');
-            if (next) leave(next, false);
+        var outside = target < 0 || target > spreads - 1;
+        if (outside && !gesture) {
+            var href = neighbour(target < 0 ? 'left' : 'right');
+            if (href) leave(href, target < 0);
             return;
         }
         if (target === spread) return;
@@ -444,14 +496,17 @@
         var update = function () {
             var back = book.querySelector('.book-sheet-back');
             if (back) back.remove();
-            spread = gesture && gesture.cancelled ? gesture.source : target;
+            if (gesture && gesture.cancelled) spread = gesture.source;
+            // The next document is not here yet: a held sheet turns onto blank paper.
+            else if (outside) book.classList.add('book-blank');
+            else spread = target;
             show();
         };
         if (!document.startViewTransition || reducedMotion()) {
             update();
             return;
         }
-        var plan = turnPlan(forward, columns, main.clientWidth, main.clientHeight, gesture && gesture.grab);
+        var plan = gesture ? gesture.plan : turnPlan(forward, columns, main.clientWidth, main.clientHeight);
         book.append(sheetBack());
         var transition;
         try {
@@ -478,10 +533,103 @@
             });
     }
 
-    /* Pointer capture belongs only to the corner buttons, never to an iDevice.
-     * Snapshots may take a frame to become ready; the gesture keeps the latest
-     * position and release decision so a quick drag cannot get stuck in between.
+    /* A held sheet. Pointer drags and trackpad swipes move it the same way: the held
+     * point stays under the hand. Snapshots may take a frame to become ready, so the
+     * gesture keeps the latest point and release decision for the turn to pick up.
+     * grab: height where the outer edge is held; null for the bottom corner.
+     * corner: the button that curls when there is no view transition to show the fold.
      */
+    function hold(direction, grab, x, y, corner) {
+        if (running || dragging) return null;
+        var source = spread;
+        var target = source + direction;
+        var outside = target < 0 || target > spreads - 1;
+        var href = outside ? neighbour(direction < 0 ? 'left' : 'right') : null;
+        if (outside && !href) return null;
+        var plan = turnPlan(direction > 0, columns, main.clientWidth, main.clientHeight, grab);
+        var rest = pointAt(plan, 0, 0);
+        var gesture = {
+            direction: direction, source: source, plan: plan, x: x, y: y, point: rest,
+            progress: 0, speed: 0, time: performance.now(), moved: false, released: false,
+            interactive: !!document.startViewTransition && !reducedMotion(),
+        };
+        var cleanup = function () {
+            if (dragging === gesture) dragging = null;
+            book.classList.remove('book-blank');
+            show();
+            root.classList.remove('book-dragging');
+            corner.style.removeProperty('--book-curl');
+            if (gesture.end) gesture.end();
+            if (deferred) {
+                deferred = false;
+                relayout();
+            }
+        };
+        gesture.move = function (x, y) {
+            if (gesture.released) return;
+            var dx = x - gesture.x;
+            if (!gesture.moved && Math.hypot(dx, y - gesture.y) < 8) return;
+            var now = performance.now();
+            // On a phone the incoming sheet starts off the left edge, so it travels twice as far.
+            var lifted = Math.max(0, Math.min(plan.height, rest.y + y - gesture.y));
+            var point = bound(plan, { x: rest.x + (plan.reverse ? 2 : 1) * dx, y: lifted });
+            var progress = progressOf(plan, point);
+            gesture.speed = gesture.moved ? (progress - gesture.progress) * 2 * plan.width / Math.max(8, now - gesture.time) : 0;
+            gesture.time = now;
+            gesture.point = point;
+            gesture.progress = progress;
+            if (!gesture.moved) {
+                gesture.moved = true;
+                root.classList.add('book-dragging');
+                if (gesture.interactive) turnTo(target, gesture);
+            }
+            if (gesture.paint) gesture.paint(point);
+            // Without view transitions the destination cannot be shown: lift the corner instead.
+            if (!gesture.interactive && !reducedMotion()) corner.style.setProperty('--book-curl', 30 + progress * 90 + 'px');
+        };
+        // A flick turns the page however little it was pulled; a held stop decides by distance.
+        gesture.release = function () {
+            if (gesture.released) return;
+            var speed = performance.now() - gesture.time > 100 ? 0 : gesture.speed;
+            gesture.released = true;
+            gesture.commit = gesture.moved && (speed > 0.4 || (speed > -0.4 && gesture.progress >= 0.3));
+            gesture.finish();
+        };
+        gesture.cancel = function () {
+            gesture.released = true;
+            gesture.cancelled = true;
+            gesture.commit = false;
+            if (gesture.interactive && gesture.moved) {
+                spread = source;
+                if (running) skip(running);
+            }
+            if (gesture.stop) gesture.stop();
+            cleanup();
+        };
+        gesture.finish = function () {
+            if (!gesture.moved) {
+                cleanup();
+            } else if (!gesture.interactive) {
+                cleanup();
+                if (gesture.commit) turnTo(target);
+            } else if (!gesture.settle) {
+                /* Picked up by animateTurn once the snapshots are ready. */
+            } else if (gesture.commit && outside) {
+                // The next document finishes the turn from where the sheet was let go.
+                handoff = gesture;
+                leave(href, direction < 0);
+            } else {
+                gesture.settle(gesture.point, pointAt(plan, gesture.commit ? 1 : 0, 0), 0, function () {
+                    if (!gesture.commit) spread = source;
+                    cleanup();
+                });
+            }
+        };
+        dragging = gesture;
+        return gesture;
+    }
+
+    /* Pointer capture belongs only to the corner buttons, never to an iDevice. */
     // An outer-edge strip passes the corner it lifts at a section boundary.
     function bindCorner(button, direction, corner) {
         var edge = !!corner;
@@ -492,84 +640,25 @@
             turnTo(spread + direction);
         });
         button.addEventListener('pointerdown', function (event) {
-            if (!event.isPrimary || event.button !== 0 || running || dragging) return;
+            if (!event.isPrimary || event.button !== 0) return;
             suppressClick = false;
-            var source = spread;
-            var target = source + direction;
             var grab = edge ? Math.max(0, Math.min(main.clientHeight, event.clientY - main.getBoundingClientRect().top)) : null;
-            var plan = turnPlan(direction > 0, columns, main.clientWidth, main.clientHeight, grab);
-            var gesture = {
-                button: button, direction: direction, source: source, id: event.pointerId, x: event.clientX, y: event.clientY,
-                grab: grab, base: edge ? 0 : Math.min(main.clientWidth / columns, main.clientHeight) * 0.32,
-                progress: 0, lift: plan.lift, moved: false, released: false,
-                interactive: target >= 0 && target < spreads && !!document.startViewTransition && !reducedMotion(),
-            };
-            var cleanup = function () {
-                if (dragging === gesture) dragging = null;
-                show();
-                root.classList.remove('book-dragging');
-                corner.style.removeProperty('--book-curl');
+            var gesture = hold(direction, grab, event.clientX, event.clientY, corner);
+            if (!gesture) return;
+            gesture.id = event.pointerId;
+            gesture.end = function () {
                 if (button.hasPointerCapture(gesture.id)) button.releasePointerCapture(gesture.id);
-                if (deferred) {
-                    deferred = false;
-                    relayout();
-                }
             };
-            gesture.cancel = function () {
-                gesture.released = true;
-                gesture.cancelled = true;
-                gesture.commit = false;
-                if (gesture.moved) suppressClick = true;
-                if (gesture.interactive && gesture.moved) {
-                    spread = source;
-                    show();
-                    if (running) skip(running);
-                }
-                if (gesture.stop) gesture.stop();
-                cleanup();
-            };
-            gesture.finish = function () {
-                if (gesture.interactive && gesture.moved) {
-                    if (!gesture.settle) return;
-                    gesture.settle(gesture.progress, gesture.commit ? 1 : 0, gesture.lift, function () {
-                        if (!gesture.commit) { spread = source; show(); }
-                        cleanup();
-                    });
-                } else {
-                    cleanup();
-                    if (gesture.moved && gesture.commit) turnTo(target);
-                }
-            };
-            dragging = gesture;
             button.setPointerCapture(event.pointerId);
         });
         button.addEventListener('pointermove', function (event) {
             var gesture = dragging;
-            if (!gesture || gesture.id !== event.pointerId || gesture.released) return;
-            var distance = direction * (gesture.x - event.clientX);
-            if (!gesture.moved && Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) < 8) return;
-            gesture.progress = Math.max(0, Math.min(1, distance / main.clientWidth));
-            var lift = gesture.base + gesture.y - event.clientY;
-            // The held point of an edge stays on the page; a corner always rises a little.
-            gesture.lift = edge ? Math.max(gesture.grab - main.clientHeight, Math.min(gesture.grab, lift))
-                : Math.max(12, Math.min(main.clientHeight * 0.65, lift));
-            if (!gesture.moved) {
-                gesture.moved = true;
-                suppressClick = true;
-                root.classList.add('book-dragging');
-                if (gesture.interactive) turnTo(spread + direction, gesture);
-            }
-            if (gesture.paint) gesture.paint(gesture.progress, gesture.lift);
-            // At a document boundary the destination does not exist yet. Lift the
-            // corner, then let the browser's navigation transition turn the page.
-            if (!gesture.interactive && !reducedMotion()) corner.style.setProperty('--book-curl', 30 + gesture.progress * 90 + 'px');
+            if (!gesture || gesture.id !== event.pointerId) return;
+            gesture.move(event.clientX, event.clientY);
+            if (gesture.moved) suppressClick = true;
         });
         button.addEventListener('pointerup', function (event) {
-            var gesture = dragging;
-            if (!gesture || gesture.id !== event.pointerId || gesture.released) return;
-            gesture.released = true;
-            gesture.commit = gesture.progress >= 0.35;
-            gesture.finish();
+            if (dragging && dragging.id === event.pointerId) dragging.release();
         });
         button.addEventListener('pointercancel', function () { if (dragging) dragging.cancel(); });
         button.addEventListener('lostpointercapture', function () {
@@ -741,6 +830,40 @@
                 if (Math.abs(dx) > 60 && Math.abs(dx) > 2 * Math.abs(dy)) turnTo(spread + (dx < 0 ? 1 : -1));
             },
             { passive: true },
+        );
+
+        // A sideways two-finger swipe on a trackpad holds the sheet at that height, like a
+        // pull from the edge; it lets go when the wheel goes quiet, momentum included.
+        var swipe = null;
+        var quiet = 0;
+        // On the document: while the page turns, wheel events stop reaching the book.
+        document.addEventListener(
+            'wheel',
+            function (event) {
+                var sideways = !event.ctrlKey && Math.abs(event.deltaX) > Math.abs(event.deltaY);
+                if (swipe === null && !(sideways && book.contains(event.target))) return;
+                // Also keeps the browser's back/forward swipe off the book.
+                event.preventDefault();
+                clearTimeout(quiet);
+                quiet = setTimeout(function () {
+                    if (swipe) swipe.release();
+                    swipe = null;
+                }, 160);
+                // ponytail: lines are taken as 16px; the 2 is how far the sheet travels per finger pixel.
+                var dx = event.deltaX * (event.deltaMode === 1 ? 16 : 1) * 2;
+                if (swipe === null) {
+                    var direction = dx > 0 ? 1 : -1;
+                    var top = main.getBoundingClientRect().top;
+                    var grab = Math.max(0, Math.min(main.clientHeight, event.clientY - top));
+                    // false until the wheel is quiet: a swipe that could not turn is not retried by its momentum.
+                    swipe = hold(direction, grab, 0, 0, direction > 0 ? parts.next : parts.prev) || false;
+                    if (swipe) swipe.travel = 0;
+                }
+                if (!swipe || swipe !== dragging) return;
+                swipe.travel -= dx;
+                swipe.move(swipe.travel, 0);
+            },
+            { passive: false },
         );
 
         // Content that changes size (images, opened boxes, activities) moves the pages.
