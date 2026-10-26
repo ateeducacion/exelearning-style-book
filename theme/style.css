@@ -1053,6 +1053,34 @@ html.book-paged .exe-web-site main.page .idevice_node:not(.text) {
     filter: drop-shadow(2px -2px 3px #3b2a1a47);
 }
 
+/* The rest of the outer edge: the sheet folds from the height where it is held */
+.book-edge {
+    position: absolute;
+    z-index: 3;
+    top: 0;
+    bottom: 0;
+    width: min(32px, var(--book-margin));
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+}
+
+.book-edge-prev {
+    left: 0;
+}
+
+.book-edge-next {
+    right: 0;
+}
+
+.book-edge[hidden] {
+    display: none;
+}
+
+.book-dragging .book-edge {
+    cursor: grabbing;
+}
+
 /* ::after is the page underneath, uncovered by the lifted corner; ::before is the flap */
 .book-corner::before,
 .book-corner::after {
@@ -1382,6 +1410,7 @@ html:active-view-transition-type(book-turn-new)::view-transition-new(book-page) 
     .book-folio,
     .book-end,
     .book-corner,
+    .book-edge,
     .book-ribbon,
     .book-index {
         display: none;

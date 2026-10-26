@@ -175,8 +175,8 @@
         var x0 = plan.spine;
         var sheet = dir > 0 ? rect(x0, x0 + width, height) : rect(x0 - width, x0, height);
         var other = plan.columns > 1 ? (dir > 0 ? rect(0, x0, height) : rect(x0, 2 * width, height)) : [];
-        var corner = { x: x0 + dir * width, y: height };
-        var to = { x: corner.x - dir * 2 * width * t, y: height - lift * Math.sin(Math.PI * t) };
+        var corner = { x: x0 + dir * width, y: plan.grab };
+        var to = { x: corner.x - dir * 2 * width * t, y: plan.grab - lift * Math.sin(Math.PI * t) };
         var dx = to.x - corner.x;
         var dy = to.y - corner.y;
         var length = Math.hypot(dx, dy);
@@ -198,7 +198,9 @@
             var d = 2 * ((p.x - middle.x) * n.x + (p.y - middle.y) * n.y);
             return { x: p.x - d * n.x, y: p.y - d * n.y };
         });
-        var curl = Math.max(0.01, Math.min(width * 0.24, lift * 0.65) * Math.sin(Math.PI * t));
+        // A sheet pulled level from its edge still bends as much as a lifted corner.
+        var bend = plan.edge ? Math.max(Math.abs(lift), plan.bend) : lift;
+        var curl = Math.max(0.01, Math.min(width * 0.24, bend * 0.65) * Math.sin(Math.PI * t));
         var edge = { x: middle.x + n.x * curl, y: middle.y + n.y * curl };
         var band = clip(reflected, edge, { x: -n.x, y: -n.y });
         var reach = Math.hypot(plan.totalWidth, height);
@@ -227,7 +229,10 @@
         };
     }
 
-    function turnPlan(forward, cols, width, height) {
+    // grab: height where the outer edge is held; omitted, the bottom corner is lifted.
+    function turnPlan(forward, cols, width, height, grab) {
+        var lift = Math.min(width / cols, height) * 0.32;
+        var edge = grab !== undefined && grab !== null;
         return {
             sheet: cols > 1 || forward ? 'old' : 'new',
             under: cols > 1 || forward ? 'new' : 'old',
@@ -238,7 +243,10 @@
             height: height,
             spine: cols > 1 ? width / 2 : 0,
             dir: cols > 1 && !forward ? -1 : 1,
-            lift: Math.min(width / cols, height) * 0.32,
+            edge: edge,
+            grab: edge ? grab : height,
+            bend: lift,
+            lift: edge ? 0 : lift,
         };
     }
 
@@ -385,8 +393,10 @@
         parts.folioRight.textContent = columns > 1 ? prefix + (first + 1) : prefix + first;
         parts.folioRight.hidden = columns > 1 && last && rightEmpty;
         parts.end.hidden = !(last && rightEmpty);
-        parts.prev.hidden = spread === 0 && !neighbour('left') && !(dragging && dragging.button === parts.prev);
-        parts.next.hidden = last && !neighbour('right') && !(dragging && dragging.button === parts.next);
+        parts.prev.hidden = spread === 0 && !neighbour('left') && !(dragging && dragging.direction < 0);
+        parts.next.hidden = last && !neighbour('right') && !(dragging && dragging.direction > 0);
+        parts.prevEdge.hidden = parts.prev.hidden;
+        parts.nextEdge.hidden = parts.next.hidden;
         var read = sections ? (section - 1 + (spread + 1) / spreads) / sections : (spread + 1) / spreads;
         book.style.setProperty('--book-read', Math.min(1, Math.max(0, read)).toFixed(3));
     }
@@ -441,7 +451,7 @@
             update();
             return;
         }
-        var plan = turnPlan(forward, columns, main.clientWidth, main.clientHeight);
+        var plan = turnPlan(forward, columns, main.clientWidth, main.clientHeight, gesture && gesture.grab);
         book.append(sheetBack());
         var transition;
         try {
@@ -472,7 +482,10 @@
      * Snapshots may take a frame to become ready; the gesture keeps the latest
      * position and release decision so a quick drag cannot get stuck in between.
      */
-    function bindCorner(button, direction) {
+    // An outer-edge strip passes the corner it lifts at a section boundary.
+    function bindCorner(button, direction, corner) {
+        var edge = !!corner;
+        corner = corner || button;
         var suppressClick = false;
         button.addEventListener('click', function (event) {
             if (suppressClick && event.detail) { suppressClick = false; return; }
@@ -483,9 +496,11 @@
             suppressClick = false;
             var source = spread;
             var target = source + direction;
-            var plan = turnPlan(direction > 0, columns, main.clientWidth, main.clientHeight);
+            var grab = edge ? Math.max(0, Math.min(main.clientHeight, event.clientY - main.getBoundingClientRect().top)) : null;
+            var plan = turnPlan(direction > 0, columns, main.clientWidth, main.clientHeight, grab);
             var gesture = {
-                button: button, source: source, id: event.pointerId, x: event.clientX, y: event.clientY,
+                button: button, direction: direction, source: source, id: event.pointerId, x: event.clientX, y: event.clientY,
+                grab: grab, base: edge ? 0 : Math.min(main.clientWidth / columns, main.clientHeight) * 0.32,
                 progress: 0, lift: plan.lift, moved: false, released: false,
                 interactive: target >= 0 && target < spreads && !!document.startViewTransition && !reducedMotion(),
             };
@@ -493,7 +508,7 @@
                 if (dragging === gesture) dragging = null;
                 show();
                 root.classList.remove('book-dragging');
-                button.style.removeProperty('--book-curl');
+                corner.style.removeProperty('--book-curl');
                 if (button.hasPointerCapture(gesture.id)) button.releasePointerCapture(gesture.id);
                 if (deferred) {
                     deferred = false;
@@ -534,8 +549,10 @@
             var distance = direction * (gesture.x - event.clientX);
             if (!gesture.moved && Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) < 8) return;
             gesture.progress = Math.max(0, Math.min(1, distance / main.clientWidth));
-            gesture.lift = Math.max(12, Math.min(main.clientHeight * 0.65,
-                Math.min(main.clientWidth / columns, main.clientHeight) * 0.32 + gesture.y - event.clientY));
+            var lift = gesture.base + gesture.y - event.clientY;
+            // The held point of an edge stays on the page; a corner always rises a little.
+            gesture.lift = edge ? Math.max(gesture.grab - main.clientHeight, Math.min(gesture.grab, lift))
+                : Math.max(12, Math.min(main.clientHeight * 0.65, lift));
             if (!gesture.moved) {
                 gesture.moved = true;
                 suppressClick = true;
@@ -545,7 +562,7 @@
             if (gesture.paint) gesture.paint(gesture.progress, gesture.lift);
             // At a document boundary the destination does not exist yet. Lift the
             // corner, then let the browser's navigation transition turn the page.
-            if (!gesture.interactive && !reducedMotion()) button.style.setProperty('--book-curl', 30 + gesture.progress * 90 + 'px');
+            if (!gesture.interactive && !reducedMotion()) corner.style.setProperty('--book-curl', 30 + gesture.progress * 90 + 'px');
         });
         button.addEventListener('pointerup', function (event) {
             var gesture = dragging;
@@ -661,11 +678,18 @@
         parts.next.append(element('span', '', label('next', 'Next')));
         bindCorner(parts.prev, -1);
         bindCorner(parts.next, 1);
+        // The rest of the outer edge pulls the sheet too, from the height where it is held.
+        parts.prevEdge = element('div', 'book-edge book-edge-prev');
+        parts.nextEdge = element('div', 'book-edge book-edge-next');
+        parts.prevEdge.setAttribute('aria-hidden', 'true');
+        parts.nextEdge.setAttribute('aria-hidden', 'true');
+        bindCorner(parts.prevEdge, -1, parts.prev);
+        bindCorner(parts.nextEdge, 1, parts.next);
 
         sentinel = element('span', 'book-end-of-text');
         sentinel.setAttribute('aria-hidden', 'true');
         main.append(sentinel, parts.headLeft, parts.headRight, parts.folioLeft, parts.folioRight, parts.end);
-        book.append(parts.prev, parts.next);
+        book.append(parts.prevEdge, parts.nextEdge, parts.prev, parts.next);
     }
 
     function listen() {
