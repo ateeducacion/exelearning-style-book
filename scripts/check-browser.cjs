@@ -218,13 +218,14 @@ const base = process.argv[2] || 'http://localhost:1314/';
     await page.locator('input[class*="exe-sortableList-check-"]').click();
     assert.match(await page.locator('[id$="-feedback"]').innerText(), /Correcto|superada/i, 'Sorting exercise can be completed');
 
-    // Phones: one page, nothing wider than the screen.
-    for (const width of [390, 320]) {
-      await page.setViewportSize({ width, height: 844 });
+    // Phones: one page, nothing wider than the screen. A phone in desktop-site mode
+    // reports a desktop width but a much taller screen, so it gets one page too.
+    for (const [width, height] of [[390, 844], [320, 844], [980, 2100]]) {
+      await page.setViewportSize({ width, height });
       await page.goto(urls[2]); await ready();
       state = await book();
-      assert.equal(state.columns, '1', `One page at ${width}px`);
-      assert.equal(state.bodyScroll, false, `Fits ${width}px`);
+      assert.equal(state.columns, '1', `One page at ${width}×${height}`);
+      assert.equal(state.bodyScroll, false, `Fits ${width}×${height}`);
     }
     assert.deepEqual(errors, [], errors.join('\n'));
     console.log(`PASS: ${urls.length} sections read with the corners (${turns} turns), back to the last page, keyboard, index, activities and phone widths.`);
