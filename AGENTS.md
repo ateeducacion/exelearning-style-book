@@ -13,6 +13,9 @@
 - Un elemento solo cabe en una transición (dos imágenes). El reverso real de la hoja sale de
   combinar una del documento (imagen fija de `main` con dos dobles páginas, `html.book-wide`)
   con otra acotada al libro (`book-spread`): ver `openFold`. Sin ella, `openRoll` (dos imágenes).
+- Entre secciones, el documento vecino se carga en un `iframe.book-peek` dentro de `main`
+  (`peekAt`). Nunca añadirlo ni quitarlo mientras hay una transición de vista o antes de que
+  el documento se haya mostrado: el renderer de Chrome se cae.
 - La geometría (`foldTo` y compañía) es pura y se prueba en `scripts/check-turn.cjs`; los
   eventos de puntero no dibujan, lo hace `tick` una vez por fotograma.
 - El botón «Edit with eXeLearning» es solo del ejemplo publicado: vive en `edit-in-exelearning.js`

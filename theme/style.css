@@ -1484,8 +1484,35 @@ html:active-view-transition-type(book-turn-new)::view-transition-new(book-page) 
 }
 
 /* Turning towards another section: blank paper waits under the sheet */
-.book-blank main.page > * {
+.book-blank main.page > :not(.book-peek) {
     visibility: hidden;
+}
+
+/* The next section in a frame the size of the window, clipped by main to its pages:
+   under a sheet held towards it (placed by style.js) */
+html.book-paged .exe-web-site main.page > iframe.book-peek {
+    position: absolute;
+    z-index: 0;
+    max-width: none;
+    margin: 0;
+    border: 0;
+    pointer-events: none;
+}
+
+/* Inside that frame the ribbon and the corners are the reader's own, drawn over it */
+html.book-framed .book-ribbon,
+html.book-framed .book-index,
+html.book-framed .book-corner {
+    display: none;
+}
+
+/* For the still picture of its facing page, the frame stands in for main */
+html.book-peeking .exe-web-site main.page {
+    view-transition-name: none;
+}
+
+html.book-peeking .book-peek {
+    view-transition-name: book-page;
 }
 
 /* Back of the sheet (added by style.js only while the page turns) */
@@ -1594,6 +1621,7 @@ html.book-paged .exe-web-site #skipNav:not(:focus) {
     .book-end,
     .book-corner,
     .book-edge,
+    .book-peek,
     .book-ribbon,
     .book-index {
         display: none;

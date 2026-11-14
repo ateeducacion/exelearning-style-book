@@ -41,6 +41,22 @@
     var frame = 0;
     // main is showing two double pages for a snapshot.
     var wide = false;
+    // The neighbouring section, loaded in a frame under the sheet held towards it.
+    var peek = null;
+    // The sheet landed on that frame: the navigation that follows has nothing left to turn.
+    var arrived = false;
+    // This document is still being turned to from the previous one, or not shown yet.
+    var revealing = false;
+    var shown = false;
+    // This document is such a frame, inside the previous or next section.
+    var framed = false;
+    try {
+        framed = !!window.frameElement && window.frameElement.classList.contains('book-peek');
+    } catch (e) {
+        /* A frame of another origin: not ours. */
+    }
+    // The reader's own ribbon hangs over it: the frame does not print a second one.
+    if (framed) root.classList.add('book-framed');
 
     /* ---------- Small helpers ---------- */
 
@@ -326,13 +342,15 @@
         var flap = reflect(folded, middle, n);
         // The back of the sheet rests on the opposite page, so it is the sheet mirrored in
         // the spine and then in the crease: two mirrors make a turn, and print stays readable.
-        // The snapshot holds two double pages; shift picks the facing page of the next one.
-        var shift = plan.dir > 0 ? -plan.totalWidth : 0;
+        // The snapshot holds more than the page that shows; shot picks the facing page out of it.
+        // shot: for a point of the picture, kx/ky take it to where it rests on the page and
+        // gx/gy are where the picture was when it was taken (all in page coordinates).
+        var shot = plan.shot || { kx: plan.dir > 0 ? -plan.totalWidth : 0, ky: 0, gx: plan.dir > 0 ? 0 : -plan.totalWidth, gy: 0 };
         var a = 2 * n.x * n.x - 1;
         var b = 2 * n.x * n.y;
         var d = 2 * ((2 * plan.spine - middle.x) * n.x - middle.y * n.y);
         var face = folded.map(function (p) {
-            return { x: 2 * plan.spine - p.x - shift, y: p.y };
+            return { x: 2 * plan.spine - p.x - shot.kx, y: p.y - shot.ky };
         });
         /*
          * Paper bends round the crease instead of creasing: a band of light in fold
@@ -360,7 +378,8 @@
             sheet: { clipPath: path([clip(sheet, middle, n), other]) },
             face: { clipPath: face.length > 2 ? 'polygon(' + points(face) + ')' : EMPTY,
                 transform: matrix([a, b, -b, 1 - 2 * n.y * n.y,
-                    a * shift + 2 * plan.spine - d * n.x + (plan.dir > 0 ? 0 : plan.totalWidth), b * shift - d * n.y]) },
+                    a * shot.kx - b * shot.ky + 2 * plan.spine - d * n.x - shot.gx,
+                    b * shot.kx + (1 - 2 * n.y * n.y) * shot.ky - d * n.y - shot.gy]) },
             flap: { clipPath: light, transform: box },
             // The loose edge floats highest: its shadow leads the hand and falls down-right of a light above.
             shadow: { filter: shadowOf((3 + n.x * 5) * strength, (5 + n.y * 5) * strength, 2 + 16 * strength, 0.34 * strength) },
@@ -534,7 +553,15 @@
         // A sheet let go here was turning onto blank paper: the snapshot is this page as it is.
         var held = handoff;
         handoff = null;
-        clearHeld();
+        if (arrived) {
+            // The sheet already lies on the next section, shown in its frame: just swap documents.
+            if (event.viewTransition) skip(event.viewTransition);
+            return;
+        }
+        // (The frame of a section only hovered stays, parked out of sight: Chrome's renderer
+        // crashes if a frame is removed while the documents swap.)
+        clearBacks();
+        if (book) book.classList.remove('book-blank');
         if (!event.viewTransition || !event.activation || !main) return;
         var from = pageIndex(location.href);
         var to = pageIndex(event.activation.entry.url);
@@ -548,15 +575,21 @@
         });
     });
 
-    // Leftovers of a turn: the back of the sheet and the blank paper under it.
-    function clearHeld() {
+    function clearBacks() {
         var backs = document.querySelectorAll('.book-sheet-back');
         for (var i = 0; i < backs.length; i++) backs[i].remove();
+    }
+
+    // Leftovers of a turn: the back of the sheet, the blank paper under it and the frame on it.
+    function clearHeld() {
+        clearBacks();
         if (book) book.classList.remove('book-blank');
+        dropPeek();
     }
 
     window.addEventListener('pagereveal', function (event) {
         // A page left mid-turn may come back from the back/forward cache with its sheet.
+        arrived = false;
         if (dragging) dragging.cancel();
         clearHeld();
         if (!event.viewTransition) return;
@@ -574,7 +607,11 @@
         var back = sheetBack();
         target.append(back);
         var transition = event.viewTransition;
-        transition.finished.catch(noop).then(function () { back.remove(); });
+        revealing = true;
+        transition.finished.catch(noop).then(function () {
+            revealing = false;
+            back.remove();
+        });
         transition.types.add(plan.sheet === 'old' ? 'book-turn-old' : 'book-turn-new');
         transition.ready
             .then(function () {
@@ -597,13 +634,84 @@
         location.assign(href);
     }
 
-    // A sheet held towards another section: have that document in the cache by the time it lands.
-    function prefetch(href) {
-        if (!/^https?:/.test(href) || document.querySelector('link[rel="prefetch"][href="' + href + '"]')) return;
-        var link = element('link');
-        link.rel = 'prefetch';
-        link.href = href;
-        document.head.append(link);
+    /*
+     * A sheet held towards another section turns onto that section itself: its document
+     * loads in a frame the size of the window, laid out exactly as it will be, and main
+     * clips it to the pages. Nothing is copied or drawn by hand; the frame is that document.
+     * Only for a book read on its own over http(s): framed inside another site (an LMS) the
+     * section would count as visited, and from a file: the frame cannot be checked.
+     */
+    function peekAt(href, backwards) {
+        if (peek && peek.href === href) return peek;
+        dropPeek();
+        var alone = false;
+        try {
+            alone = window.top === window;
+        } catch (e) {
+            /* Framed by another origin. */
+        }
+        if (!alone || !/^https?:$/.test(location.protocol) || !document.startViewTransition || reducedMotion()) return null;
+        var frame = element('iframe', 'book-peek');
+        frame.setAttribute('aria-hidden', 'true');
+        frame.setAttribute('tabindex', '-1');
+        frame.inert = true;
+        var mine = peek = { frame: frame, href: href, ready: false, shown: false };
+        frame.addEventListener('load', function () {
+            if (peek !== mine) return;
+            try {
+                mine.ready = frame.contentDocument.documentElement.classList.contains('book-paged');
+            } catch (e) {
+                mine.ready = false;
+            }
+            // Loaded while the sheet is already over blank paper: print the page under it.
+            if (mine.ready && book.classList.contains('book-blank')) showPeek();
+        });
+        // Going back, the previous section opens at its last page.
+        frame.src = stripUrl(href) + (backwards ? '#book-last' : '');
+        placePeek(false);
+        main.append(frame);
+        return peek;
+    }
+
+    // Parked below the pages, where a snapshot can still take it, or laid under the sheet.
+    function placePeek(shown) {
+        var box = main.getBoundingClientRect();
+        var style = peek.frame.style;
+        peek.shown = shown;
+        peek.park = shown ? 0 : 2 * window.innerHeight;
+        style.width = window.innerWidth + 'px';
+        style.height = window.innerHeight + 'px';
+        style.left = spread * main.clientWidth - box.left + 'px';
+        style.top = peek.park - box.top + 'px';
+    }
+
+    function showPeek() {
+        if (peek && peek.ready) placePeek(true);
+    }
+
+    function dropPeek() {
+        if (!peek) return;
+        peek.frame.remove();
+        peek = null;
+    }
+
+    function turning() {
+        try {
+            return root.matches(':active-view-transition');
+        } catch (e) {
+            return false;
+        }
+    }
+
+    // The pointer rests on a corner or edge that leads to another section: start loading it.
+    function intend(direction) {
+        // Not before this document is on screen (a pointer already resting here enters
+        // before pagereveal) nor while a sheet is in the air: a frame added to or removed
+        // from a page that is being photographed for a view transition crashes Chrome's renderer.
+        if (!main || !shown || dragging || running || flying || revealing || turning()) return;
+        var target = spread + direction;
+        var href = target < 0 || target > spreads - 1 ? neighbour(direction < 0 ? 'left' : 'right') : null;
+        if (href) peekAt(href, direction < 0);
     }
 
     /* ---------- Pagination ---------- */
@@ -689,7 +797,8 @@
 
     // The real back of the sheet needs a third picture of the pages: see openFold().
     function facesFor(outside) {
-        return !outside && columns > 1 && !!window.Element && !!Element.prototype.startViewTransition &&
+        // Towards another section, only if its document is already loaded in the frame.
+        return (!outside || (peek && peek.ready)) && columns > 1 && !!window.Element && !!Element.prototype.startViewTransition &&
             !!document.startViewTransition && !reducedMotion() ? 3 : 2;
     }
 
@@ -727,12 +836,18 @@
 
     // The sheet is down, or was dropped: no transition, class or leftover survives it.
     function close(leaf) {
+        land(leaf);
+        clearHeld();
+    }
+
+    // The same, but what the sheet turned onto stays: blank paper, or the frame of the next section.
+    function land(leaf) {
         if (leaf.stop) leaf.stop();
         leaf.paint = leaf.settle = leaf.stop = leaf.glide = null;
         if (flying === leaf) flying = null;
         narrow();
-        root.classList.remove('book-fold', 'book-leafing');
-        clearHeld();
+        root.classList.remove('book-fold', 'book-leafing', 'book-peeking');
+        clearBacks();
         (leaf.transitions || []).forEach(skip);
     }
 
@@ -742,6 +857,8 @@
         var outside = target < 0 || target > spreads - 1;
         if (outside && !gesture) {
             var href = neighbour(target < 0 ? 'left' : 'right');
+            // The next document turns its own sheet; no frame is needed here.
+            dropPeek();
             if (href) leave(href, target < 0);
             return;
         }
@@ -779,24 +896,28 @@
             running = transition;
             transition.finished.catch(noop).then(function () {
                 if (running === transition) running = null;
-                if (gesture && dragging === gesture) gesture.cancel();
+                // (A sheet that landed on the next section stays down until the documents change.)
+                if (gesture && dragging === gesture && !arrived) gesture.cancel();
                 settled();
             });
             return transition;
         };
-        if (plan.faces === 3) openFold(leaf, target, watch, ready, failed);
-        else openRoll(leaf, target, outside, watch, ready, failed);
+        if (plan.faces !== 3) openRoll(leaf, target, outside, watch, ready, failed);
+        else if (outside) openPeekFold(leaf, watch, ready, failed);
+        else openFold(leaf, target, watch, ready, failed);
     }
 
     // Two pictures: the double page before and after, with a plain back of paper between them.
     function openRoll(leaf, target, outside, watch, ready, failed) {
         var plan = leaf.plan;
         var update = function () {
-            clearHeld();
+            clearBacks();
             if (leaf.cancelled) return;
-            // The next document is not here yet: a held sheet turns onto blank paper.
-            if (outside) book.classList.add('book-blank');
-            else spread = target;
+            // Towards another section the sheet turns onto its frame, or onto blank paper until it loads.
+            if (outside) {
+                book.classList.add('book-blank');
+                showPeek();
+            } else spread = target;
             leaf.landed = true;
             show();
         };
@@ -826,15 +947,43 @@
      *    live page underneath.
      */
     function openFold(leaf, target, watch, ready, failed) {
-        var plan = leaf.plan;
         widen(target);
         book.append(sheetBack(true));
         var outer = watch(document.startViewTransition(function () {
             narrow();
-            clearHeld();
+            clearBacks();
             // From here on main belongs to the book's own transition.
             if (!leaf.cancelled) root.classList.add('book-fold');
         }));
+        leafThrough(leaf, outer, ready, failed, function () {
+            spread = target;
+        });
+    }
+
+    /*
+     * The same towards another section. The still picture is of the frame that holds
+     * that section, taken where it is parked; then the frame is laid under the sheet,
+     * live, as the page it uncovers.
+     */
+    function openPeekFold(leaf, watch, ready, failed) {
+        var box = main.getBoundingClientRect();
+        leaf.plan.shot = { kx: -box.left, ky: -box.top, gx: -box.left, gy: peek.park - box.top };
+        book.append(sheetBack(true));
+        root.classList.add('book-peeking');
+        var outer = watch(document.startViewTransition(function () {
+            root.classList.remove('book-peeking');
+            clearBacks();
+            if (!leaf.cancelled) root.classList.add('book-fold');
+        }));
+        leafThrough(leaf, outer, ready, failed, function () {
+            book.classList.add('book-blank');
+            showPeek();
+        });
+    }
+
+    // The second half of a real fold: the book's own transition, whose update is `turn`.
+    function leafThrough(leaf, outer, ready, failed, turn) {
+        var plan = leaf.plan;
         outer.ready.then(function () {
             if (leaf.cancelled) return;
             // Nothing moves yet: these keep the still pictures alive until the sheet can be drawn.
@@ -848,7 +997,7 @@
             root.classList.add('book-leafing');
             var inner = book.startViewTransition(function () {
                 if (leaf.cancelled) return;
-                spread = target;
+                turn();
                 leaf.landed = true;
                 show();
             });
@@ -877,6 +1026,7 @@
         var href = outside ? neighbour(direction < 0 ? 'left' : 'right') : null;
         if (outside && !href) return null;
         corner = corner || (direction > 0 ? parts.next : parts.prev);
+        if (href) peekAt(href, direction < 0);
         var plan = turnPlan(direction > 0, columns, main.clientWidth, main.clientHeight, grab, facesFor(outside));
         var rest = pointAt(plan, 0, 0);
         var gesture = {
@@ -884,7 +1034,6 @@
             progress: 0, speed: 0, velocity: { x: 0, y: 0 }, time: performance.now(), moved: false, released: false,
             interactive: !!document.startViewTransition && !reducedMotion(),
         };
-        if (href) prefetch(href);
         var cleanup = function () {
             if (dragging === gesture) dragging = null;
             close(gesture);
@@ -954,9 +1103,17 @@
                 if (gesture.commit) turnTo(target);
             } else if (!gesture.settle) {
                 /* Picked up by turnTo once the snapshots are ready. */
+            } else if (gesture.commit && outside && peek && peek.shown) {
+                // The next section is already under the sheet: lay it down here, then change documents.
+                gesture.settle(gesture.point, pointAt(plan, 1, 0), 0, function () {
+                    land(gesture);
+                    arrived = true;
+                    leave(href, direction < 0);
+                });
             } else if (gesture.commit && outside) {
                 // The next document finishes the turn from where the sheet was let go.
                 handoff = gesture;
+                dropPeek();
                 leave(href, direction < 0);
             } else {
                 gesture.settle(gesture.point, pointAt(plan, gesture.commit ? 1 : 0, 0), 0, function () {
@@ -1060,7 +1217,7 @@
     }
 
     // A free edge lifts a little under the pointer, where it would be taken.
-    function peek(strip, along) {
+    function lift(strip, along) {
         strip.addEventListener('pointermove', function (event) {
             if (event.pointerType === 'touch' || dragging) return;
             var box = strip.getBoundingClientRect();
@@ -1176,8 +1333,13 @@
         parts.nextEdge.setAttribute('aria-hidden', 'true');
         bindCorner(parts.prevEdge, -1, parts.prev);
         bindCorner(parts.nextEdge, 1, parts.next);
-        peek(parts.prevEdge, 'y');
-        peek(parts.nextEdge, 'y');
+        lift(parts.prevEdge, 'y');
+        lift(parts.nextEdge, 'y');
+        [[parts.prev, -1], [parts.prevEdge, -1], [parts.next, 1], [parts.nextEdge, 1]].forEach(function (zone) {
+            zone[0].addEventListener('pointerenter', function () { intend(zone[1]); });
+            // (Again on a move: the pointer may already have been here while a page was turning.)
+            zone[0].addEventListener('pointermove', function () { if (!peek) intend(zone[1]); });
+        });
         // So do the top and bottom edges, from the point where they are held.
         parts.topEdge = element('div', 'book-edge book-edge-top');
         parts.bottomEdge = element('div', 'book-edge book-edge-bottom');
@@ -1185,8 +1347,8 @@
         parts.bottomEdge.setAttribute('aria-hidden', 'true');
         bindEdge(parts.topEdge, true);
         bindEdge(parts.bottomEdge, false);
-        peek(parts.topEdge, 'x');
-        peek(parts.bottomEdge, 'x');
+        lift(parts.topEdge, 'x');
+        lift(parts.bottomEdge, 'x');
 
         sentinel = element('span', 'book-end-of-text');
         sentinel.setAttribute('aria-hidden', 'true');
@@ -1290,7 +1452,7 @@
                 if (target === main) {
                     // On main itself only content coming or going counts, not its style or the book's own print.
                     var nodes = Array.prototype.concat.call([], Array.from(records[i].addedNodes), Array.from(records[i].removedNodes));
-                    if (!nodes.some(function (node) { return !(node.matches && node.matches('.book-head, .book-folio, .book-end, .book-end-of-text')); })) continue;
+                    if (!nodes.some(function (node) { return !(node.matches && node.matches('.book-head, .book-folio, .book-end, .book-end-of-text, .book-peek')); })) continue;
                 }
                 relayout();
                 return;
@@ -1322,8 +1484,13 @@
         buildIndex();
         listen();
         layout();
+        // Frames run after pagereveal, which comes before the first one.
+        requestAnimationFrame(function () {
+            requestAnimationFrame(function () { shown = true; });
+        });
         var hash = location.hash && document.getElementById(decodeURIComponent(location.hash.slice(1)));
-        if (take(LAND_KEY) === stripUrl(location.href)) spread = spreads - 1;
+        // A frame under a sheet turned back is told by its address; it must not use up the reader's own landing.
+        if (framed ? location.hash === '#book-last' : take(LAND_KEY) === stripUrl(location.href)) spread = spreads - 1;
         else if (hash && main.contains(hash)) spread = spreadOf(hash);
         show();
     }

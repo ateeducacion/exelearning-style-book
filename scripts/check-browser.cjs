@@ -391,12 +391,51 @@ if (process.env.BOOK_VERBOSE) {
     await page.mouse.up();
     while ((await book()).spread < await page.evaluate(() => Math.round(document.querySelector('main.page').scrollWidth / document.querySelector('main.page').clientWidth) - 1)) await turn('next');
     await press(0.8, 0.008, 0.4, 0.4);
-    assert.equal(await page.evaluate(() => document.querySelector('link[rel="prefetch"]').href), urls[1], 'A sheet held towards the next section asks for it ahead');
+    assert.equal(await page.evaluate(() => document.querySelector('iframe.book-peek').src), urls[1], 'A sheet held towards the next section loads it in a frame');
+    // Once loaded, that section is the page under the sheet, exactly where its pages will be.
+    await page.waitForFunction(() => {
+      const frame = document.querySelector('iframe.book-peek').getBoundingClientRect();
+      return frame.left === 0 && frame.top === 0 && frame.width === innerWidth && frame.height === innerHeight;
+    });
+    assert.equal(await page.evaluate(() => document.querySelector('iframe.book-peek').contentDocument.querySelector('main.page').getBoundingClientRect().left === document.querySelector('main.page').getBoundingClientRect().left), true, 'Its pages lie exactly on these');
+    assert.deepEqual(await page.evaluate(() => { const frame = document.querySelector('iframe.book-peek'); return [frame.inert, frame.getAttribute('aria-hidden'), getComputedStyle(frame).pointerEvents, frame.contentDocument.documentElement.classList.contains('book-framed')]; }), [true, 'true', 'none', true], 'The frame is only a picture: out of reach of pointer, keyboard and readers');
+    await page.waitForTimeout(150);
+    await page.evaluate(() => addEventListener('pageswap', event => sessionStorage.setItem('check-arrived', String(!!event.viewTransition && document.documentElement.matches(':active-view-transition')))));
+    await page.mouse.up();
+    await page.waitForURL(urls[1]); await ready();
+    if (handover) assert.equal(await page.evaluate(() => sessionStorage.getItem('exe-book-turn')), null, 'The sheet landed on the frame: the next document has nothing left to turn');
+    await page.waitForFunction(() => !document.documentElement.matches(':active-view-transition'));
+    assert.equal(await page.evaluate(() => document.querySelector('.book-blank, .book-sheet-back')), null, 'The top edge turns to the next section too');
+    // Hovering the corner that leads to another section loads it; with it loaded before the pull,
+    // the back of the sheet is the real facing page of that section (where real folds exist).
+    await page.goto(urls[2]); await ready();
+    await page.locator('.book-corner-prev').hover();
+    await page.waitForFunction(() => document.querySelector('iframe.book-peek'));
+    assert.equal(await page.evaluate(() => document.querySelector('iframe.book-peek').src), urls[1] + '#book-last', 'Going back, the frame opens the previous section at its last page');
+    await page.waitForFunction(() => { try { return document.querySelector('iframe.book-peek').contentDocument.querySelector('.book-folio-left').textContent; } catch (e) { return false; } });
+    await page.waitForTimeout(200);
+    await press(0.005, 0.5, 0.4, 0.45);
+    await page.waitForFunction(() => document.getAnimations().filter(animation => animation.playState === 'paused').length >= 4);
+    if (real) assert.deepEqual(await page.evaluate(() => document.getAnimations().filter(animation => animation.playState === 'paused').map(animation => animation.effect.pseudoElement).sort()), ['::view-transition-group(book-page)', '::view-transition-old(book-page)', '::view-transition-old(book-sheet-back)', '::view-transition-old(book-spread)'], 'A real fold between sections');
+    // Let go before the threshold: the frame goes, the page stays.
+    await page.mouse.move(...await at(0.1, 0.5), { steps: 4 });
+    await page.waitForTimeout(150);
+    await page.mouse.up();
+    await page.waitForFunction(() => !document.documentElement.matches(':active-view-transition') && !document.documentElement.classList.contains('book-dragging'));
+    assert.deepEqual(await page.evaluate(() => [location.href, document.querySelectorAll('.book-peek, .book-blank, .book-sheet-back').length]), [urls[2], 0], 'A sheet put back leaves no frame behind');
+    // And all the way: the previous section, at its last double page, with nothing left over.
+    await page.locator('.book-corner-prev').hover();
+    await page.waitForFunction(() => { try { return document.querySelector('iframe.book-peek').contentDocument.querySelector('.book-folio-left').textContent; } catch (e) { return false; } });
+    await page.waitForTimeout(200);
+    await press(0.005, 0.5, 0.7, 0.45);
     await page.waitForTimeout(150);
     await page.mouse.up();
     await page.waitForURL(urls[1]); await ready();
     await page.waitForFunction(() => !document.documentElement.matches(':active-view-transition'));
-    assert.equal(await page.evaluate(() => document.querySelector('.book-blank, .book-sheet-back')), null, 'The top edge turns to the next section too');
+    state = await book();
+    assert.equal(state.spread, sectionSpreads - 1, 'The sheet turned back lands on the last double page of the previous section');
+    assert.equal(await page.evaluate(() => document.querySelectorAll('.book-peek, .book-blank, .book-sheet-back').length + document.documentElement.classList.length - ['js', 'book-paged'].filter(name => document.documentElement.classList.contains(name)).length), 0, 'and the new document starts clean');
+
     await page.goto(urls.at(-1)); await ready();
     while ((await book()).next) await turn('next');
     await press(0.995, 0.5, 0.5, 0.5);
@@ -457,7 +496,7 @@ if (process.env.BOOK_VERBOSE) {
       assert.equal((await book()).bodyScroll, false);
     }
     assert.deepEqual(errors, [], errors.join('\n'));
-    console.log(`PASS (${engine}): ${urls.length} sections read with the corners (${turns} turns), back to the last page, keyboard, index, activities,\n      every free edge of both sheets, held, reversed and released folds, resize, fifty turns in a row, section ends, phone widths and touch.`);
+    console.log(`PASS (${engine}): ${urls.length} sections read with the corners (${turns} turns), back to the last page, keyboard, index, activities,\n      every free edge of both sheets, held, reversed and released folds, resize, fifty turns in a row, section ends,\n      the neighbouring section under a sheet held towards it, phone widths and touch.`);
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
 
