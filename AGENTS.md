@@ -10,6 +10,11 @@
   esquinas, cinta e índice van fuera.
 - El paso de página es una transición de vista (`book-page` y `book-sheet-back`); `style.js`
   calcula el pliegue. No clonar ni reescribir iDevices.
+- Un elemento solo cabe en una transición (dos imágenes). El reverso real de la hoja sale de
+  combinar una del documento (imagen fija de `main` con dos dobles páginas, `html.book-wide`)
+  con otra acotada al libro (`book-spread`): ver `openFold`. Sin ella, `openRoll` (dos imágenes).
+- La geometría (`foldTo` y compañía) es pura y se prueba en `scripts/check-turn.cjs`; los
+  eventos de puntero no dibujan, lo hace `tick` una vez por fotograma.
 - El botón «Edit with eXeLearning» es solo del ejemplo publicado: vive en `edit-in-exelearning.js`
   (raíz) y `package.py` lo añade al HTML. Nunca en `theme/`, o saldría en los recursos exportados.
 - `python3 scripts/package.py` reconstruye ambos paquetes, el manifiesto de descarga y el enlace anterior.

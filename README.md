@@ -24,16 +24,20 @@ fuera del estilo, y no aparece en los recursos que se exporten con él.
 
 - **Esquinas inferiores**: pasan página. Al pasar el ratón se levantan; al pulsar,
   la hoja se dobla desde la esquina, cruza el lomo y se posa al otro lado.
-  También se pueden arrastrar: al soltar después de recorrer el 35 % del ancho
-  se completa el giro; antes, vuelve a su posición. Escape cancela el arrastre.
-  Dentro de una sección el pliegue sigue el puntero; entre documentos se levanta
-  la esquina y, al soltar, comienza la transición de navegación.
   En la última página de una sección se pasa a la siguiente; hacia atrás se abre
   la sección anterior por su última página.
-- **Borde exterior de cada página**: como en turn.js, la hoja se puede coger a
-  cualquier altura del borde, no solo por la esquina, y se dobla desde ese punto.
-  Tirando en horizontal el pliegue es vertical; tirando hacia arriba o hacia abajo
-  se inclina. La franja ocupa solo el margen, así que no tapa el contenido.
+- **Los tres bordes libres de cada hoja** (el exterior, el superior y el inferior):
+  la hoja se puede coger por cualquier punto y se dobla desde ahí, con ratón, dedo
+  o lápiz. El punto cogido sigue a la mano: se puede levantar un poco, detener,
+  llevar en diagonal, cruzar el lomo, volver atrás y devolver a su sitio. Al soltar
+  pasado el 30 % del recorrido la hoja termina de pasar; antes, vuelve. Un gesto
+  rápido la pasa aunque se haya tirado poco, y uno rápido hacia atrás la devuelve.
+  Escape la suelta. Junto al lomo no se puede coger: ahí está cosida.
+  Las franjas ocupan solo los márgenes (32 px con ratón, 44 px con el dedo, nunca
+  más que el margen), así que no tapan el contenido ni las actividades. Bajo el
+  puntero el borde se levanta un poco, donde se cogería. Con una sola página, el
+  borde superior y el inferior pasan hacia delante o hacia atrás según hacia dónde
+  se tire.
 - **← y →** (también Re Pág y Av Pág) pasan página fuera de los controles de las
   actividades. En el móvil también se puede deslizar el dedo.
 - **Cinta de marcapáginas**: abre el índice, con el buscador y la licencia.
@@ -47,6 +51,60 @@ Las actividades nunca se parten entre páginas; si una no cabe en una página, s
 desplaza dentro de ella. El paso de página usa transiciones de vista: en los
 navegadores que no las tienen, o con «reducir movimiento», la página cambia sin
 animación. Sin JavaScript, o al imprimir, el contenido se lee como una página normal.
+
+## Cómo se dobla la hoja
+
+El motor está en `theme/style.js`, sin dependencias, y separa cuatro cosas:
+
+- **Geometría** (`foldTo`, `realFold`, `bound`, `creaseNormal`): funciones puras, sin DOM.
+  La hoja se coge en `plan.grab`, un punto `{ x, y }` de un borde libre. El papel no
+  se estira y está cosido al lomo: el punto cogido nunca se aleja de los dos extremos
+  del lomo más de lo que lo está en reposo, y por eso el pliegue no corta la
+  encuadernación. Lejos de una esquina, la inclinación del pliegue crece con lo que
+  se ha tirado, para que no se doble de golpe una cuña entera de la hoja.
+- **Gesto** (`hold`, `bindZone`): los eventos de puntero solo anotan dónde está la mano
+  y su velocidad filtrada; no dibujan.
+- **Dibujo y movimiento** (`stage`, `tick`, `glideTo`): un único bucle
+  `requestAnimationFrame` dibuja como mucho una vez por fotograma, y nada si la hoja
+  está quieta. Al soltar, la hoja sigue una curva de Hermite que parte de la posición
+  y la velocidad de la mano y llega en reposo (120–500 ms según lo que falte;
+  180–350 ms al volver; `--book-turn`, 0,7 s, para el giro automático).
+- **Navegación** (`turnTo`, `openFold`, `openRoll`, `pageswap`/`pagereveal`).
+
+Hay dos modelos con la misma geometría de pliegue:
+
+- **Pliegue real** (tres imágenes). El pliegue es la mediatriz entre el punto cogido
+  y la mano, y lo que queda detrás se refleja sobre la página. El reverso muestra la
+  página real que lleva impresa (la enfrentada de la doble página siguiente), girada
+  y sin texto invertido, y se posa exactamente sobre la página opuesta. Una transición
+  de vista solo da dos imágenes de un elemento, así que se combinan dos: una del
+  documento, que fotografía `main` durante un fotograma con las dos dobles páginas (el
+  libro recorta la que sobra) y se queda con esa imagen fija para el reverso; y otra
+  acotada al libro (`element.startViewTransition`), con la hoja y la página viva que
+  descubre. Se usa a doble página, dentro de una sección, en navegadores con
+  transiciones acotadas (Chrome y Edge actuales).
+- **Rollo** (dos imágenes). Donde no hay tercera imagen —una sola página, Firefox,
+  Safari, o al pasar a otra sección, cuyo documento aún no está cargado— el reverso es
+  papel liso que se enrolla un poco por detrás de la mano y se estrecha hasta
+  desaparecer al posarse. Hacia otra sección la hoja se dobla sobre papel en blanco,
+  el documento siguiente se pide por adelantado (`prefetch`, sin ejecutar nada) y
+  termina el giro desde el punto exacto en que se soltó.
+
+La luz acompaña al pliegue: una franja en coordenadas del pliegue hace de curva del
+papel (más ancha cuanto más vertical es el pliegue y cuanto más se tira, nula en
+reposo y al posarse), con su sombra sobre la página que descubre, y el reverso
+proyecta una sombra que se abre con la altura. Nada se funde por opacidad.
+
+No se clona ni se rasteriza ninguna actividad: todas las caras son capturas del
+navegador de los nodos originales, que conservan su estado.
+
+Medido en Chrome 157 sin interfaz (macOS, 1280×800, 1× y 2×): durante un arrastre
+de 3 s el motor gasta unos 0,1 ms por fotograma en actualizar sus capas, con
+intervalos de 16,7 ms (máximo 16,8), sin tareas largas; la hoja aparece unos 67 ms
+después del primer movimiento, lo que tardan en estar listas las capturas. El motor
+anterior daba las mismas cifras: lo que no convencía era la geometría y el
+movimiento al soltar, no el rendimiento. El coste de composición en la GPU no se
+puede medir sin interfaz.
 
 ## Vista previa y paquetes
 
@@ -68,9 +126,17 @@ NODE_PATH=/ruta/a/exelearning/node_modules node scripts/check-browser.cjs
 
 Recorren el libro entero con las esquinas, la vuelta a la última página de la
 sección anterior, el teclado, el índice, las actividades, los anchos de móvil y
-el arrastre de las esquinas (avance, retorno y cancelación). `BOOK_CHROME` permite
-indicar la ruta de Chrome si no está instalado en su ubicación habitual.
-`node scripts/check-turn.cjs` comprueba la geometría y el ciclo de los gestos sin navegador.
+los arrastres: desde las esquinas y desde varios puntos de los tres bordes de
+ambas hojas, con la hoja detenida a medio doblar, ida y vuelta sobre el lomo,
+suelta fuera del libro, cambio de tamaño durante el gesto, paso entre una y dos
+páginas, cincuenta giros seguidos, principio y final del libro, paso entre
+secciones y arrastre táctil. `BOOK_CHROME` permite indicar la ruta de Chrome si
+no está instalado en su ubicación habitual; `BOOK_BROWSER=firefox` (o `webkit`)
+ejecuta lo mismo en los navegadores de Playwright, y `BOOK_VERBOSE=1` nombra cada
+comprobación al llegar a ella.
+`node scripts/check-turn.cjs` comprueba sin navegador la geometría (cualquier punto
+de los bordes, ambos modelos, simetría, continuidad, valores finitos, unión al
+lomo), la física al soltar y el ciclo de vida de un giro, incluida su limpieza.
 Para regenerar la miniatura, añade `BOOK_SCREENSHOT=theme/screenshot.png` al comando.
 
 ## Mantenimiento y publicación
@@ -130,6 +196,7 @@ originales.
 El movimiento de la hoja toma [Turn.js](https://github.com/bahadirdogru/Turn.js-5)
 como referencia visual. La geometría, las sombras y los gestos de este estilo son
 una implementación independiente: no incluyen código ni dependencias de Turn.js.
-Las sombras se orientan con el pliegue y el reverso se aplana reduciendo su anchura,
-sin una desaparición por opacidad. Se conservan las columnas CSS y las capturas
-`book-page` / `book-sheet-back`; no se clonan ni se reescriben iDevices.
+Tampoco de StPageFlip, que se estudió como alternativa: necesita una página por
+elemento y pliega desde las esquinas, y aquí las páginas son columnas CSS del
+contenido original. Se conservan las columnas CSS y las capturas `book-page` /
+`book-sheet-back`; no se clonan ni se reescriben iDevices.

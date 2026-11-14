@@ -923,7 +923,7 @@ html.book-paged .exe-web-site main.page .idevice_node:not(.text) {
 .book-folio {
     position: absolute;
     z-index: 1;
-    width: 50%;
+    width: var(--book-half, 50%);
     break-inside: avoid;
     margin: 0;
     color: var(--book-muted);
@@ -951,7 +951,7 @@ html.book-paged .exe-web-site main.page .idevice_node:not(.text) {
 }
 
 .book-head-right {
-    left: calc(var(--book-scroll, 0px) + 50%);
+    left: calc(var(--book-scroll, 0px) + var(--book-half, 50%));
     font-style: italic;
 }
 
@@ -969,7 +969,7 @@ html.book-paged .exe-web-site main.page .idevice_node:not(.text) {
 }
 
 .book-folio-right {
-    left: calc(var(--book-scroll, 0px) + 50%);
+    left: calc(var(--book-scroll, 0px) + var(--book-half, 50%));
     text-align: right;
     padding-right: var(--book-margin);
     box-sizing: border-box;
@@ -980,8 +980,8 @@ html.book-paged .exe-web-site main.page .idevice_node:not(.text) {
     position: absolute;
     z-index: 1;
     top: 50%;
-    left: calc(var(--book-scroll, 0px) + 50%);
-    width: 50%;
+    left: calc(var(--book-scroll, 0px) + var(--book-half, 50%));
+    width: var(--book-half, 50%);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1053,16 +1053,22 @@ html.book-paged .exe-web-site main.page .idevice_node:not(.text) {
     filter: drop-shadow(2px -2px 3px #3b2a1a47);
 }
 
-/* The rest of the outer edge: the sheet folds from the height where it is held */
+/* The free edges of both sheets: the paper folds from the point where it is held.
+   The strips stay inside the margins, so they never cover the content. */
 .book-edge {
+    --book-grip: 32px;
     position: absolute;
     z-index: 3;
-    top: 0;
-    bottom: 0;
-    width: min(32px, var(--book-margin));
     cursor: grab;
     touch-action: none;
     user-select: none;
+}
+
+.book-edge-prev,
+.book-edge-next {
+    top: 0;
+    bottom: 0;
+    width: min(var(--book-grip), var(--book-margin));
 }
 
 .book-edge-prev {
@@ -1071,6 +1077,96 @@ html.book-paged .exe-web-site main.page .idevice_node:not(.text) {
 
 .book-edge-next {
     right: 0;
+}
+
+.book-edge-top,
+.book-edge-bottom {
+    left: 0;
+    right: 0;
+    height: calc(var(--book-grip) - 8px);
+}
+
+.book-edge-top {
+    top: 0;
+}
+
+.book-edge-bottom {
+    bottom: 0;
+}
+
+/* Fingers need more room than a mouse */
+@media (pointer: coarse) {
+    .book-edge {
+        --book-grip: 44px;
+    }
+}
+
+/* Under the pointer a free edge lifts a little, where it would be taken:
+   the lip of the paper and, outside it, the page underneath. */
+.book-edge::after {
+    content: "";
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    filter: drop-shadow(0 1px 2px #3b2a1a59);
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+}
+
+.book-edge-prev::after,
+.book-edge-next::after {
+    top: calc(var(--book-peek, 50%) - 56px);
+    width: 13px;
+    height: 112px;
+}
+
+.book-edge-top::after,
+.book-edge-bottom::after {
+    left: calc(var(--book-peek, 50%) - 56px);
+    width: 112px;
+    height: 13px;
+}
+
+.book-edge-next::after {
+    right: 0;
+    background: linear-gradient(to right, #fffdf8, #e4d9c2 48%, var(--book-under) 52%);
+    clip-path: ellipse(100% 50% at 100% 50%);
+    transform-origin: right;
+    transform: scaleX(0.2);
+}
+
+.book-edge-prev::after {
+    left: 0;
+    background: linear-gradient(to left, #fffdf8, #e4d9c2 48%, var(--book-under) 52%);
+    clip-path: ellipse(100% 50% at 0 50%);
+    transform-origin: left;
+    transform: scaleX(0.2);
+}
+
+.book-edge-top::after {
+    top: 0;
+    background: linear-gradient(to top, #fffdf8, #e4d9c2 48%, var(--book-under) 52%);
+    clip-path: ellipse(50% 100% at 50% 0);
+    transform-origin: top;
+    transform: scaleY(0.2);
+}
+
+.book-edge-bottom::after {
+    bottom: 0;
+    background: linear-gradient(to bottom, #fffdf8, #e4d9c2 48%, var(--book-under) 52%);
+    clip-path: ellipse(50% 100% at 50% 100%);
+    transform-origin: bottom;
+    transform: scaleY(0.2);
+}
+
+@media (hover: hover) {
+    .book-edge:hover::after {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.book-dragging .book-edge::after {
+    opacity: 0;
 }
 
 .book-edge[hidden] {
@@ -1144,6 +1240,8 @@ html.book-paged .exe-web-site main.page .idevice_node:not(.text) {
     clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 84%, 0 100%);
     filter: drop-shadow(0 2px 2px #3b2a1a59);
     transition: height 0.2s ease-out;
+    /* Its own picture while a page turns, or the sheet would be drawn over it */
+    view-transition-name: book-ribbon;
 }
 
 .book-ribbon:hover,
@@ -1248,6 +1346,7 @@ html.book-paged #made-with-eXe {
 @media (prefers-reduced-motion: reduce) {
     .book-corner::before,
     .book-corner::after,
+    .book-edge::after,
     .book-ribbon,
     .book-index {
         transition: none;
@@ -1333,9 +1432,9 @@ html.book-paged #made-with-eXe {
 }
 
 /* ===================================================================
- * Page turn: the sheet lifts by its corner and turns over the spine.
- * style.js computes the fold; browsers without view transitions or
- * with reduced motion just show the next page.
+ * Page turn: the sheet folds from the point where it is held and turns
+ * over the spine. style.js computes the fold on every frame; browsers
+ * without view transitions or with reduced motion just show the next page.
  * =================================================================== */
 
 @media (prefers-reduced-motion: no-preference) {
@@ -1344,22 +1443,29 @@ html.book-paged #made-with-eXe {
     }
 }
 
+/* Only the pages are photographed: the desk and the cover stay live underneath */
+html.book-paged {
+    view-transition-name: none;
+}
+
 ::view-transition {
     pointer-events: none;
 }
 
 ::view-transition-old(book-page),
 ::view-transition-new(book-page),
+::view-transition-old(book-spread),
+::view-transition-new(book-spread),
 ::view-transition-old(book-sheet-back),
 ::view-transition-new(book-sheet-back) {
     animation: none;
     mix-blend-mode: normal;
+    opacity: 1;
 }
 
 ::view-transition-old(book-sheet-back),
 ::view-transition-new(book-sheet-back) {
     transform-origin: 0 0;
-    opacity: 1;
 }
 
 html:active-view-transition-type(book-turn-old)::view-transition-old(book-page),
@@ -1371,6 +1477,10 @@ html:active-view-transition-type(book-turn-new)::view-transition-new(book-page) 
 ::view-transition-group(book-sheet-back) {
     z-index: 2;
     pointer-events: none;
+}
+
+::view-transition-group(book-ribbon) {
+    z-index: 3;
 }
 
 /* Turning towards another section: blank paper waits under the sheet */
@@ -1385,6 +1495,73 @@ html:active-view-transition-type(book-turn-new)::view-transition-new(book-page) 
     pointer-events: none;
     view-transition-name: book-sheet-back;
     background: linear-gradient(90deg, #b5a68a, #f3ecdd 18%, #fffdf8 42%, #eee4cf 80%, #c6b99d);
+}
+
+/*
+ * A real fold (openFold in style.js): the back of the sheet shows its print.
+ *
+ * For one frame main is two double pages wide, clipped by the book, so that its
+ * snapshot also holds the neighbouring double page. The columns keep their width.
+ */
+html.book-wide .exe-web-site .exe-content {
+    clip-path: inset(-120px calc(-3px - 14px * (1 - var(--book-read))) -120px calc(-3px - 14px * var(--book-read)));
+}
+
+html.book-wide .exe-web-site main.page {
+    --book-half: 25%;
+    right: -100%;
+    columns: 4;
+    background-size: 50% 100%;
+}
+
+html.book-wide-back .exe-web-site main.page {
+    right: 0;
+    left: -100%;
+}
+
+/* That snapshot stays as a still picture; main then belongs to the book's own transition */
+html.book-fold .exe-web-site main.page {
+    view-transition-name: none;
+}
+
+html.book-leafing .exe-web-site main.page {
+    view-transition-name: book-spread;
+}
+
+/* The still picture is the back of the sheet: hidden until the fold places it */
+html.book-fold::view-transition-old(book-page) {
+    transform-origin: 0 0;
+    clip-path: polygon(0 0, 0 0, 0 0);
+}
+
+html.book-fold::view-transition-old(book-sheet-back) {
+    clip-path: polygon(0 0, 0 0, 0 0);
+}
+
+/* The sheet (old) lies on the page it uncovers (new, live) */
+::view-transition-old(book-spread) {
+    z-index: 1;
+}
+
+/* While it has a transition of its own the book anchors its fixed descendants:
+   keep eXeLearning's skip link out of sight until it is focused */
+html.book-paged .exe-web-site #skipNav:not(:focus) {
+    top: -160px;
+}
+
+/* The rest of the book does not change while a sheet turns */
+.exe-content::view-transition-old(root) {
+    display: none;
+}
+
+.exe-content::view-transition-new(root) {
+    animation: none;
+}
+
+/* Over real print the back is only light: the shadow the curl throws on the page it
+   uncovers (first third) and the bend of the paper round the crease (the rest) */
+.book-sheet-back.book-sheet-light {
+    background: linear-gradient(90deg, #3b2a1a00, #3b2a1a12 18%, #3b2a1a40 33.3%, #3b2a1a3d 33.4%, #3b2a1a14 42%, #fffdf82e 52%, #fffdf800 72%);
 }
 
 @media (prefers-reduced-motion: reduce) {

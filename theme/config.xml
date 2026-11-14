@@ -7,7 +7,7 @@
   <author>Área de Tecnología Educativa · Gobierno de Canarias</author>
   <license>Creative Commons by-sa</license>
   <license-url>http://creativecommons.org/licenses/by-sa/4.0/</license-url>
-  <description>Lectura como un libro abierto sobre la mesa: cada página del recurso se corta en páginas de libro, a doble página en pantallas anchas y de una en una en el móvil. Las esquinas inferiores pasan página con un pliegue de papel (también las teclas ← y → y el gesto de deslizar), y una cinta de marcapáginas abre el índice con el buscador y la licencia. Sin JavaScript, o al imprimir, el contenido se lee como una página normal.
+  <description>Lectura como un libro abierto sobre la mesa: cada página del recurso se corta en páginas de libro, a doble página en pantallas anchas y de una en una en el móvil. Las esquinas inferiores y los bordes libres de cada hoja pasan página con un pliegue de papel que sigue a la mano (también las teclas ← y → y el gesto de deslizar), y una cinta de marcapáginas abre el índice con el buscador y la licencia. Sin JavaScript, o al imprimir, el contenido se lee como una página normal.
 
 Basado en el estilo Default de eXeLearning (Ignacio Gros, exelearning.net), CC BY-SA 4.0. Iconos de iDevices de Francisco Javier Pulido Cuadrado, CC BY-SA 4.0 (http://creativecommons.org/licenses/by-sa/4.0/). Tipografía Literata (The Literata Project Authors), SIL Open Font License 1.1 (fonts/OFL.txt).
 
