@@ -1,10 +1,19 @@
 // Uses Playwright already installed in the eXeLearning checkout; no test runner.
 const assert = require('node:assert/strict');
-const { chromium } = require('playwright');
+const playwright = require('playwright');
+// BOOK_BROWSER=firefox|webkit runs the same checks there (Playwright's own builds).
+const engine = process.env.BOOK_BROWSER || 'chromium';
 const base = process.argv[2] || 'http://localhost:1314/';
+// BOOK_VERBOSE=1 names each check as it is reached, to see where a run stops.
+if (process.env.BOOK_VERBOSE) {
+  for (const name of ['equal', 'deepEqual', 'match']) {
+    const check = assert[name];
+    assert[name] = (...values) => { console.error('·', values[2] || ''); return check(...values); };
+  }
+}
 
 (async () => {
-  const browser = await chromium.launch(process.env.BOOK_CHROME ? { executablePath: process.env.BOOK_CHROME } : { channel: 'chrome' });
+  const browser = await playwright[engine].launch(engine !== 'chromium' ? {} : process.env.BOOK_CHROME ? { executablePath: process.env.BOOK_CHROME } : { channel: 'chrome' });
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -56,7 +65,9 @@ const base = process.argv[2] || 'http://localhost:1314/';
       sessionStorage.setItem('check-sheet-back', String(document.querySelectorAll('.book-sheet-back').length));
     }));
     while (stripped(page.url()) === stripped(urls[1])) await turn('next');
-    assert.equal(await page.evaluate(() => sessionStorage.getItem('check-sheet-back')), '0', 'The outgoing page is not covered by the back of the sheet');
+    // (Only where documents hand a turn over to each other: pageswap.)
+    const handover = await page.evaluate(() => 'onpageswap' in window);
+    if (handover) assert.equal(await page.evaluate(() => sessionStorage.getItem('check-sheet-back')), '0', 'The outgoing page is not covered by the back of the sheet');
     assert.equal(await page.locator('.book-sheet-back').count(), 0, 'The incoming page drops the back of the sheet after the turn');
 
     // Going back to the previous section opens it at its last page.
@@ -216,8 +227,137 @@ const base = process.argv[2] || 'http://localhost:1314/';
     assert.equal((await book()).spread, sourceSpread + 1, 'A trackpad swipe turns the page');
     await swipe(-1);
     assert.equal((await book()).spread, sourceSpread, 'A trackpad swipe turns back');
+
+    // --- The sheet can be taken at any point of its three free edges ---
+    const idle = () => page.waitForFunction(() => !document.documentElement.matches(':active-view-transition') && !document.documentElement.classList.contains('book-dragging'));
+    const at = async (fx, fy) => {
+      const box = await page.locator('main.page').boundingBox();
+      return [box.x + box.width * fx, box.y + box.height * fy];
+    };
+    // Press at one point of the page box, pull through the others, stop, let go.
+    const pullFrom = async (from, ...through) => {
+      await page.mouse.move(...await at(...from));
+      await page.mouse.down();
+      for (const point of through) await page.mouse.move(...await at(...point), { steps: 6 });
+      await page.waitForTimeout(150);
+      await page.mouse.up();
+      await idle();
+    };
+    const spreadNow = async () => (await book()).spread;
+    const home = await spreadNow();
+    for (const height of [0.1, 0.25, 0.5, 0.75, 0.9]) {
+      await pullFrom([0.995, height], [0.5, height - 0.05]);
+      assert.equal(await spreadNow(), home + 1, `The outer edge turns the page from ${height * 100} % of its height`);
+      await pullFrom([0.005, height], [0.5, height + 0.05]);
+      assert.equal(await spreadNow(), home, `and the left one turns it back from ${height * 100} %`);
+    }
+    for (const [edge, y] of [['top', 0.008], ['bottom', 0.992]]) {
+      for (const x of [0.6, 0.75, 0.9]) {
+        await pullFrom([x, y], [x - 0.3, 0.5]);
+        assert.equal(await spreadNow(), home + 1, `The ${edge} edge of the right sheet turns the page from ${x * 100} % of the width`);
+        await pullFrom([1 - x, y], [1 - x + 0.3, 0.5]);
+        assert.equal(await spreadNow(), home, `and the ${edge} edge of the left sheet turns it back`);
+      }
+    }
+    await page.mouse.move(...await at(0.5, 0.008));
+    await page.mouse.down();
+    await page.mouse.move(...await at(0.3, 0.3), { steps: 4 });
+    assert.equal(await page.evaluate(() => document.documentElement.classList.contains('book-dragging')), false, 'By the spine the sheet is bound: nothing to take');
+    await page.mouse.up();
+
+    // Where the browser allows it, the back of the sheet is the real facing page:
+    // one still picture above the page and the book's own two pictures under it.
+    const real = await page.evaluate(() => !!Element.prototype.startViewTransition);
+    await page.mouse.move(...await at(0.995, 0.5));
+    await page.mouse.down();
+    await page.mouse.move(...await at(0.7, 0.4), { steps: 6 });
+    // The engine's layers are the paused animations; the browser's own ones run.
+    await page.waitForFunction(() => document.getAnimations().filter(animation => animation.playState === 'paused').length >= 4);
+    const layers = await page.evaluate(() => document.getAnimations().filter(animation => animation.playState === 'paused').map(animation => animation.effect.pseudoElement).sort());
+    if (real) assert.deepEqual(layers, ['::view-transition-group(book-page)', '::view-transition-old(book-page)', '::view-transition-old(book-sheet-back)', '::view-transition-old(book-spread)'], 'A real fold: the back of the sheet, its light, its shadow and the sheet');
+    else assert.equal(layers.length, 4, 'A roll: sheet, page underneath, back and shadow');
+    // Held half folded for seconds: it stays where it is and nothing keeps running.
+    const held = () => page.evaluate(() => document.getAnimations().filter(animation => animation.playState === 'paused').map(animation => JSON.stringify(animation.effect.getKeyframes()[0])).join());
+    const before = await held();
+    const moves = await page.evaluate(() => new Promise(resolve => {
+      let count = 0;
+      const original = KeyframeEffect.prototype.setKeyframes;
+      KeyframeEffect.prototype.setKeyframes = function (frames) { count++; return original.call(this, frames); };
+      setTimeout(() => { KeyframeEffect.prototype.setKeyframes = original; resolve(count); }, 2000);
+    }));
+    assert.equal(moves, 0, 'A sheet held still is not redrawn');
+    assert.equal(await held(), before, 'and stays exactly where it is held');
+    assert.equal(await page.evaluate(() => document.documentElement.matches(':active-view-transition')), true);
+    // Diagonal pull, across the spine, then all the way back: the hand changes its mind.
+    await page.mouse.move(...await at(0.2, 0.7), { steps: 8 });
+    await page.mouse.move(...await at(0.6, 0.3), { steps: 8 });
+    await page.mouse.move(...await at(0.99, 0.5), { steps: 8 });
+    await page.waitForTimeout(150);
+    await page.mouse.up();
+    await idle();
+    assert.equal(await spreadNow(), home, 'A sheet carried across the spine and back stays on its page');
+    // Let go far outside the book.
+    await page.mouse.move(...await at(0.995, 0.3));
+    await page.mouse.down();
+    await page.mouse.move(2, 2, { steps: 8 });
+    await page.waitForTimeout(150);
+    await page.mouse.up();
+    await idle();
+    assert.equal(await spreadNow(), home + 1, 'The pointer may leave the book: the sheet follows and turns');
+    // A turn leaves nothing behind.
+    const leftovers = () => page.evaluate(() => ({
+      nodes: document.querySelectorAll('.book-sheet-back, .book-extra').length,
+      classes: ['book-wide', 'book-wide-back', 'book-fold', 'book-leafing', 'book-dragging'].filter(name => document.documentElement.classList.contains(name)),
+      animations: document.getAnimations().filter(animation => /view-transition/.test(animation.effect.pseudoElement || '')).length,
+      scroll: document.querySelector('main.page').scrollLeft % document.querySelector('main.page').clientWidth,
+    }));
+    assert.deepEqual(await leftovers(), { nodes: 0, classes: [], animations: 0, scroll: 0 }, 'Nothing of the turn is left');
+    // The window changes size under a held sheet: the hold ends and the book is repaged.
+    await page.mouse.move(...await at(0.005, 0.5));
+    await page.mouse.down();
+    await page.mouse.move(...await at(0.3, 0.4), { steps: 6 });
+    await page.setViewportSize({ width: 1100, height: 760 });
+    await idle();
+    await page.mouse.up();
+    assert.deepEqual(await leftovers(), { nodes: 0, classes: [], animations: 0, scroll: 0 }, 'A resize ends the hold cleanly');
+    assert.equal((await book()).columns, '2');
+    // Down to one page and back to two while reading.
+    await page.setViewportSize({ width: 600, height: 800 });
+    await page.waitForFunction(() => getComputedStyle(document.querySelector('main.page')).columnCount === '1');
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const single = await spreadNow();
+    await pullFrom([0.98, 0.5], [0.2, 0.45]);
+    assert.equal(await spreadNow(), single + 1, 'One page: the right edge turns forward');
+    await pullFrom([0.02, 0.5], [0.8, 0.45]);
+    assert.equal(await spreadNow(), single, 'and the left edge brings the page back');
+    await pullFrom([0.5, 0.992], [0.2, 0.9]);
+    assert.equal(await spreadNow(), single + 1, 'One page: a pull to the left from the bottom edge turns forward');
+    await pullFrom([0.5, 0.992], [0.8, 0.9]);
+    assert.equal(await spreadNow(), single, 'and a pull to the right from the same point turns back');
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.waitForFunction(() => getComputedStyle(document.querySelector('main.page')).columnCount === '2');
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    // Fifty turns in a row, by key, corner and edge, then back to where the checks were.
+    await page.addStyleTag({ content: ':root { --book-turn: 0.12s !important; }' }).then(tag => tag.evaluate(node => { node.id = 'check-fast'; }));
+    const last = await page.evaluate(() => Math.round(document.querySelector('main.page').scrollWidth / document.querySelector('main.page').clientWidth) - 1);
+    let direction = 1;
+    for (let i = 0; i < 50; i++) {
+      const now = await spreadNow();
+      if (now >= last - 1) direction = -1;
+      if (now <= 0) direction = 1;
+      if (i % 3 === 0) await page.keyboard.press(direction > 0 ? 'ArrowRight' : 'ArrowLeft');
+      else if (i % 3 === 1) await page.locator('.book-corner-' + (direction > 0 ? 'next' : 'prev')).click();
+      else await pullFrom(direction > 0 ? [0.995, 0.4] : [0.005, 0.4], [0.5, 0.35]);
+      await idle();
+      assert.equal(await spreadNow(), now + direction, `Turn ${i + 1} of 50`);
+    }
+    assert.deepEqual(await leftovers(), { nodes: 0, classes: [], animations: 0, scroll: 0 }, 'Fifty turns leave nothing behind');
+    while (await spreadNow() > home) await turn('prev');
+    while (await spreadNow() < home) await turn('next');
+    await page.evaluate(() => document.getElementById('check-fast').remove());
     assert(await page.evaluate(() => window.bookActivityNodes.every((node, i) => node === document.querySelectorAll('.idevice_node')[i])), 'Activity nodes keep their identity');
     assert(await page.getByRole('radio', { name: 'Falso', exact: true }).first().isChecked(), 'Activity answers survive completed and cancelled turns');
+    assert.equal(await page.locator('.TOFP-Message').innerText(), 'Tu puntuación: 0.00', 'and so does the result of the checked activity');
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await drag('next', 0.48);
     assert.equal((await book()).spread, sourceSpread + 1, 'Reduced motion preserves drag navigation');
@@ -237,6 +377,31 @@ const base = process.argv[2] || 'http://localhost:1314/';
     await page.waitForURL(urls[1]); await ready();
     await page.waitForFunction(() => !document.documentElement.matches(':active-view-transition'));
     assert.equal(await page.evaluate(() => document.querySelector('.book-blank, .book-sheet-back')), null, 'The next section finishes the turn and leaves no blank paper');
+
+    // The same from the top edge, held where the hand is; and the ends of the book hold no sheet.
+    await page.goto(urls[0]); await ready();
+    const press = async (fx, fy, tx, ty) => {
+      const box = await page.locator('main.page').boundingBox();
+      await page.mouse.move(box.x + box.width * fx, box.y + box.height * fy);
+      await page.mouse.down();
+      await page.mouse.move(box.x + box.width * tx, box.y + box.height * ty, { steps: 6 });
+    };
+    await press(0.25, 0.008, 0.6, 0.3);
+    assert.equal(await page.evaluate(() => document.documentElement.classList.contains('book-dragging')), false, 'Nothing turns back from the first page');
+    await page.mouse.up();
+    while ((await book()).spread < await page.evaluate(() => Math.round(document.querySelector('main.page').scrollWidth / document.querySelector('main.page').clientWidth) - 1)) await turn('next');
+    await press(0.8, 0.008, 0.4, 0.4);
+    assert.equal(await page.evaluate(() => document.querySelector('link[rel="prefetch"]').href), urls[1], 'A sheet held towards the next section asks for it ahead');
+    await page.waitForTimeout(150);
+    await page.mouse.up();
+    await page.waitForURL(urls[1]); await ready();
+    await page.waitForFunction(() => !document.documentElement.matches(':active-view-transition'));
+    assert.equal(await page.evaluate(() => document.querySelector('.book-blank, .book-sheet-back')), null, 'The top edge turns to the next section too');
+    await page.goto(urls.at(-1)); await ready();
+    while ((await book()).next) await turn('next');
+    await press(0.995, 0.5, 0.5, 0.5);
+    assert.equal(await page.evaluate(() => document.documentElement.classList.contains('book-dragging')), false, 'Nothing turns forward from the last page');
+    await page.mouse.up();
 
     await page.goto(urls.find(url => url.includes('ordena'))); await ready();
     const options = await page.locator('.scrambled-list').evaluate(node => JSON.parse(node.dataset.ideviceJsonData).options);
@@ -260,8 +425,39 @@ const base = process.argv[2] || 'http://localhost:1314/';
       assert.equal(state.columns, '1', `One page at ${width}×${height}`);
       assert.equal(state.bodyScroll, false, `Fits ${width}×${height}`);
     }
+    // A finger on a phone: the edges answer to touch, and the page under them does not scroll.
+    if (engine === 'chromium') {
+      const touch = await page.context().newCDPSession(page);
+      const drag = async (from, to) => {
+        const point = (x, y) => [{ x, y, id: 1 }];
+        await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: point(...from) });
+        for (let i = 1; i <= 8; i++) {
+          await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: point(from[0] + (to[0] - from[0]) * i / 8, from[1] + (to[1] - from[1]) * i / 8) });
+          await page.waitForTimeout(16);
+        }
+        await page.waitForTimeout(150);
+        await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await page.waitForFunction(() => !document.documentElement.matches(':active-view-transition') && !document.documentElement.classList.contains('book-dragging'));
+      };
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto(urls[2]); await ready();
+      await page.evaluate(() => {
+        const paragraph = document.createElement('p');
+        paragraph.textContent = 'Page-turn regression fixture. '.repeat(400);
+        document.querySelector('.book-end-of-text').before(paragraph);
+      });
+      await page.waitForFunction(() => document.querySelector('main.page').scrollWidth > 3 * document.querySelector('main.page').clientWidth);
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      await drag([384, 400], [80, 380]);
+      assert.equal((await book()).spread, 1, 'A finger on the right edge turns the page');
+      await drag([200, 838], [330, 800]);
+      assert.equal((await book()).spread, 0, 'A finger pulling right from the bottom edge turns it back');
+      await drag([200, 6], [60, 60]);
+      assert.equal((await book()).spread, 1, 'A finger pulling left from the top edge turns it forward');
+      assert.equal((await book()).bodyScroll, false);
+    }
     assert.deepEqual(errors, [], errors.join('\n'));
-    console.log(`PASS: ${urls.length} sections read with the corners (${turns} turns), back to the last page, keyboard, index, activities and phone widths.`);
+    console.log(`PASS (${engine}): ${urls.length} sections read with the corners (${turns} turns), back to the last page, keyboard, index, activities,\n      every free edge of both sheets, held, reversed and released folds, resize, fifty turns in a row, section ends, phone widths and touch.`);
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
 
