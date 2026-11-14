@@ -81,14 +81,28 @@ Hay dos modelos con la misma geometría de pliegue:
   documento, que fotografía `main` durante un fotograma con las dos dobles páginas (el
   libro recorta la que sobra) y se queda con esa imagen fija para el reverso; y otra
   acotada al libro (`element.startViewTransition`), con la hoja y la página viva que
-  descubre. Se usa a doble página, dentro de una sección, en navegadores con
-  transiciones acotadas (Chrome y Edge actuales).
-- **Rollo** (dos imágenes). Donde no hay tercera imagen —una sola página, Firefox,
-  Safari, o al pasar a otra sección, cuyo documento aún no está cargado— el reverso es
-  papel liso que se enrolla un poco por detrás de la mano y se estrecha hasta
-  desaparecer al posarse. Hacia otra sección la hoja se dobla sobre papel en blanco,
-  el documento siguiente se pide por adelantado (`prefetch`, sin ejecutar nada) y
-  termina el giro desde el punto exacto en que se soltó.
+  descubre. Se usa a doble página en navegadores con transiciones acotadas (Chrome y
+  Edge actuales).
+- **Rollo** (dos imágenes). Donde no hay tercera imagen —una sola página, Firefox o
+  Safari— el reverso es papel liso que se enrolla un poco por detrás de la mano y se
+  estrecha hasta desaparecer al posarse.
+
+**Entre secciones** cada sección es otro documento. Al posar el puntero en la esquina
+o el borde que lleva a otra sección, o al coger la hoja, ese documento se carga en un
+marco del tamaño de la ventana, que se maqueta igual que cuando se abra, y `main` lo
+recorta a sus páginas. Así la hoja se dobla sobre la sección siguiente de verdad, y si
+el marco ya estaba cargado al empezar a tirar, el reverso muestra también su página
+real (pliegue real). Al soltar, la hoja se posa aquí y el cambio de documento ocurre
+debajo, sin otra animación. Hacia atrás el marco abre la sección anterior por su
+última página. Mientras el marco no ha cargado se ve papel en blanco, y si se suelta
+antes, el documento siguiente termina el giro desde el punto en que se soltó, como
+hasta ahora.
+
+El marco es ese documento, no una copia: sus actividades se cargan (y sus scripts se
+ejecutan) una vez en el marco y otra al abrirlo. Por eso solo se usa cuando el libro
+se lee por su cuenta en http(s): no dentro de otra página (un LMS), ni abierto como
+archivo (`file:`), ni con «reducir movimiento». Queda fuera del alcance del puntero,
+del teclado y de los lectores de pantalla (`inert`, `aria-hidden`).
 
 La luz acompaña al pliegue: una franja en coordenadas del pliegue hace de curva del
 papel (más ancha cuanto más vertical es el pliegue y cuanto más se tira, nula en
@@ -130,7 +144,7 @@ los arrastres: desde las esquinas y desde varios puntos de los tres bordes de
 ambas hojas, con la hoja detenida a medio doblar, ida y vuelta sobre el lomo,
 suelta fuera del libro, cambio de tamaño durante el gesto, paso entre una y dos
 páginas, cincuenta giros seguidos, principio y final del libro, paso entre
-secciones y arrastre táctil. `BOOK_CHROME` permite indicar la ruta de Chrome si
+secciones (con la sección siguiente o la anterior bajo la hoja) y arrastre táctil. `BOOK_CHROME` permite indicar la ruta de Chrome si
 no está instalado en su ubicación habitual; `BOOK_BROWSER=firefox` (o `webkit`)
 ejecuta lo mismo en los navegadores de Playwright, y `BOOK_VERBOSE=1` nombra cada
 comprobación al llegar a ella.
